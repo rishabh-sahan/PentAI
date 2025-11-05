@@ -1,8 +1,4 @@
-
-# Open-Fiesta
-
-
-[![Open-Fiesta](public/osfiesta.png)](public/osfiesta.mp4)
+#PentAI
 
 An open-source, multi-model AI chat playground built with Next.js App Router. Switch between providers and models, compare outputs side-by-side, and utilize optional web search and image attachments for enhanced conversations.
 
