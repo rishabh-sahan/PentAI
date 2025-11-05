@@ -1,7 +1,7 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Plus, Github, Star, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Github, Star, Check, EllipsisVertical, Pin, PinOff, Trash2, Edit, Moon, Sun } from "lucide-react";
 import Settings from "@/components/Settings";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { MODEL_CATALOG } from "@/lib/models";
@@ -9,6 +9,11 @@ import { AiModel, ChatMessage, ApiKeys, ChatThread } from "@/lib/types";
 import { callGemini, callOpenRouter } from "@/lib/client";
 import { AiInput } from "@/components/AIChatBox";
 import MarkdownLite from "@/components/MarkdownLite";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useTheme } from "next-themes";
+import ThemeToggler from "@/components/ThemeToggler";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [selectedIds, setSelectedIds] = useLocalStorage<string[]>(
@@ -27,6 +32,8 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useLocalStorage<boolean>("ai-fiesta:sidebar-open", true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [modelsModalOpen, setModelsModalOpen] = useState(false);
+  const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
+  const [renameInputValue, setRenameInputValue] = useState<string>('');
   const activeThread = useMemo(() => threads.find(t => t.id === activeId) || null, [threads, activeId]);
   const messages = useMemo(() => activeThread?.messages ?? [], [activeThread]);
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
@@ -36,6 +43,35 @@ export default function Home() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [firstNoteDismissed, setFirstNoteDismissed] = useLocalStorage<boolean>('ai-fiesta:first-visit-note-dismissed', false);
   const showFirstVisitNote = !firstNoteDismissed && (!keys?.openrouter || !keys?.gemini);
+
+  const { session, loading } = useAuth();
+  const router = useRouter();
+
+  // Move this useMemo higher in the component, before any conditional returns
+  const pairs = useMemo(() => {
+    const rows: { user: ChatMessage; answers: ChatMessage[] }[] = [];
+    let currentUser: ChatMessage | null = null;
+    for (const m of messages) {
+      if (m.role === "user") {
+        currentUser = m;
+        rows.push({ user: m, answers: [] });
+      } else if (m.role === "assistant" && currentUser) {
+        rows[rows.length - 1]?.answers.push(m);
+      }
+    }
+    return rows;
+  }, [messages]);
+  
+  // Then place this useEffect after all other hooks
+  useEffect(() => {
+    if (!loading && !session) {
+      router.push('/?login=1');
+    }
+  }, [session, loading, router]);
+  
+  if (loading || !session) {
+    return <div className="min-h-screen w-full bg-background relative text-foreground flex items-center justify-center">Loading...</div>;
+  }
 
   // Copy helper with fallback when navigator.clipboard is unavailable
   const copyToClipboard = async (text: string) => {
@@ -68,6 +104,39 @@ export default function Home() {
     });
   };
 
+  const handleRename = (id: string) => {
+    if (renameInputValue.trim() === '') return;
+    setThreads(prev => prev.map(t => t.id === id ? { ...t, title: renameInputValue.trim() } : t));
+    setRenamingThreadId(null);
+    setRenameInputValue('');
+  };
+
+  const handlePinToggle = (id: string) => {
+    setThreads(prev => {
+      const threadToToggle = prev.find(t => t.id === id);
+      if (!threadToToggle) return prev;
+
+      const updatedThread = { ...threadToToggle, pinned: !threadToToggle.pinned };
+
+      if (updatedThread.pinned) {
+        // If pinning, move to the top of the list
+        return [updatedThread, ...prev.filter(t => t.id !== id)];
+      } else {
+        // If unpinning, remove from pinned, then sort by createdAt
+        const unpinnedThreads = prev.filter(t => t.id !== id && !t.pinned);
+        const pinnedThreads = prev.filter(t => t.id !== id && t.pinned);
+        return [...pinnedThreads, updatedThread, ...unpinnedThreads.sort((a, b) => b.createdAt - a.createdAt)];
+      }
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    setThreads(prev => prev.filter(t => t.id !== id));
+    if (activeId === id) {
+      setActiveId(null);
+    }
+  };
+
   function ensureThread() {
     if (activeThread) return activeThread;
     const t: ChatThread = { id: crypto.randomUUID(), title: "New Chat", messages: [], createdAt: Date.now() };
@@ -80,6 +149,14 @@ export default function Home() {
     const prompt = text.trim();
     if (!prompt) return;
     if (selectedModels.length === 0) return alert("Select at least one model.");
+    // Enforce BYOK: require user-provided keys for providers being used
+    const needsOpenRouter = selectedModels.some((m) => m.provider === 'openrouter');
+    const needsGemini = selectedModels.some((m) => m.provider === 'gemini');
+    if ((needsOpenRouter && !keys.openrouter) || (needsGemini && !keys.gemini)) {
+      alert('Please add your own API key(s) in Settings to use these models.');
+      window.dispatchEvent(new Event('open-settings'));
+      return;
+    }
     const userMsg: ChatMessage = { role: "user", content: prompt, ts: Date.now() };
     const thread = ensureThread();
     const nextHistory = [...(thread.messages ?? []), userMsg];
@@ -93,7 +170,6 @@ export default function Home() {
       try {
         let res: unknown;
         if (m.provider === "gemini") {
-          // If user hasn't set a key, rely on server env fallback
           res = await callGemini({ apiKey: keys.gemini || undefined, model: m.model, messages: nextHistory, imageDataUrl });
         } else {
           res = await callOpenRouter({ apiKey: keys.openrouter || undefined, model: m.model, messages: nextHistory });
@@ -118,63 +194,47 @@ export default function Home() {
   }
 
   // group assistant messages by turn for simple compare view
-  const pairs = useMemo(() => {
-    const rows: { user: ChatMessage; answers: ChatMessage[] }[] = [];
-    let currentUser: ChatMessage | null = null;
-    for (const m of messages) {
-      if (m.role === "user") {
-        currentUser = m;
-        rows.push({ user: m, answers: [] });
-      } else if (m.role === "assistant" && currentUser) {
-        rows[rows.length - 1]?.answers.push(m);
-      }
-    }
-    return rows;
-  }, [messages]);
-
   return (
-    <div className="min-h-screen w-full bg-black relative text-white">
+    <div className="dashboard-root min-h-screen w-full bg-background relative text-foreground">
       <div
         className="absolute inset-0 z-0"
-        style={{ background: "linear-gradient(0deg, rgba(0,0,0,0.6), rgba(0,0,0,0.6)), radial-gradient(68% 58% at 50% 50%, #c81e3a 0%, #a51d35 16%, #7d1a2f 32%, #591828 46%, #3c1722 60%, #2a151d 72%, #1f1317 84%, #141013 94%, #0a0a0a 100%), radial-gradient(90% 75% at 50% 50%, rgba(228,42,66,0.06) 0%, rgba(228,42,66,0) 55%), radial-gradient(150% 120% at 8% 8%, rgba(0,0,0,0) 42%, #0b0a0a 82%, #070707 100%), radial-gradient(150% 120% at 92% 92%, rgba(0,0,0,0) 42%, #0b0a0a 82%, #070707 100%), radial-gradient(60% 50% at 50% 60%, rgba(240,60,80,0.06), rgba(0,0,0,0) 60%), #050505" }}
       />
       <div
         className="absolute inset-0 z-0 pointer-events-none"
-        style={{ backgroundImage: "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%)", opacity: 0.95 }}
       />
 
       <div className="relative z-10 px-3 lg:px-4 py-4 lg:py-6">
         <div className="flex gap-3 lg:gap-4">
           {/* Sidebar */}
           {/* Desktop sidebar */}
-          <aside className={`relative hidden lg:flex shrink-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)] rounded-lg border border-white/10 bg-white/5 p-3 flex-col transition-[width] duration-300 ${sidebarOpen ? 'w-64' : 'w-14'}`}>
+          <aside className={`relative hidden lg:flex shrink-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)] rounded-lg border border-sidebar-border bg-sidebar p-3 flex-col transition-[width] duration-300 ${sidebarOpen ? 'w-64' : 'w-14'}`}>
             {/* Collapse/Expand toggle */}
             <button
               aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute -right-3 top-5 z-10 h-6 w-6 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white/20"
+              className="absolute -right-3 top-5 z-10 h-6 w-6 rounded-full bg-sidebar-accent border border-sidebar-border flex items-center justify-center hover:bg-sidebar-accent-hover"
             >
               {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
             </button>
 
             <div className={`flex items-center justify-between mb-2 ${sidebarOpen ? '' : 'opacity-0 pointer-events-none'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#e42a42]" />
-                <h2 className="text-sm font-semibold">OpenSource Fiesta</h2>
+                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                <h2 className="text-sm font-semibold">PentAI</h2>
               </div>
 
           {/* First-visit API keys modal */}
           {showFirstVisitNote && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
               <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                className="absolute inset-0 bg-background/60 backdrop-blur-sm"
                 onClick={() => setFirstNoteDismissed(true)}
               />
-              <div className="relative mx-3 w-full max-w-md sm:max-w-lg rounded-2xl border border-white/10 bg-zinc-900/90 p-5 shadow-2xl">
+              <div className="relative mx-3 w-full max-w-md sm:max-w-lg rounded-2xl border border-border bg-card p-5 shadow-2xl">
                 <div className="flex items-start gap-3 mb-2">
                   <h3 className="text-base font-semibold tracking-wide">Some models need API keys</h3>
                 </div>
-                <div className="text-sm text-zinc-300 space-y-2">
+                <div className="text-sm text-muted-foreground space-y-2">
                   <p>You can generate API keys for free.</p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>One OpenRouter key works across many models.</li>
@@ -184,13 +244,13 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
                   <button
                     onClick={() => window.dispatchEvent(new Event('open-settings'))}
-                    className="text-sm px-3 py-2 rounded bg-[#e42a42] text-white border border-white/10 hover:bg-[#cf243a]"
+                    className="text-sm px-3 py-2 rounded bg-primary text-primary-foreground border border-primary-border hover:bg-primary/90"
                   >
                     Get API key for free
                   </button>
                   <button
                     onClick={() => setFirstNoteDismissed(true)}
-                    className="text-sm px-3 py-2 rounded bg-white/10 border border-white/10 hover:bg-white/15"
+                    className="text-sm px-3 py-2 rounded bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90"
                   >
                     Dismiss
                   </button>
@@ -211,17 +271,71 @@ export default function Home() {
                     setThreads(prev => [t, ...prev]);
                     setActiveId(t.id);
                   }}
-                  className="mb-3 text-sm px-3 py-2 rounded-md bg-[#e42a42] hover:bg-[#cf243a]"
+                  className="mb-3 text-sm px-3 py-2 rounded-md bg-primary hover:bg-primary/90"
                 >
                   + New Chat
                 </button>
-                <div className="text-xs uppercase tracking-wide opacity-60 mb-2">Chats</div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Chats</div>
                 <div className="flex-1 overflow-y-auto space-y-1 pr-1">
                   {threads.length === 0 && <div className="text-xs opacity-60">No chats yet</div>}
                   {threads.map(t => (
-                    <button key={t.id} onClick={() => setActiveId(t.id)} className={`w-full text-left px-2 py-2 rounded-md text-sm border ${t.id === activeId ? 'bg-white/15 border-white/20' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-                      {t.title || 'Untitled'}
-                    </button>
+                    <div key={t.id} className="group relative flex items-center">
+                      {renamingThreadId === t.id ? (
+                        <input
+                          autoFocus
+                          value={renameInputValue}
+                          onChange={(e) => setRenameInputValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleRename(t.id);
+                            } else if (e.key === 'Escape') {
+                              setRenamingThreadId(null);
+                              setRenameInputValue('');
+                            }
+                          }}
+                          onBlur={() => handleRename(t.id)}
+                          className="w-full bg-card border border-border rounded-md text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      ) : (
+                        <div 
+                          onClick={() => setActiveId(t.id)} 
+                          className={`w-full text-left px-2 py-2 rounded-md text-sm border flex items-center justify-between cursor-pointer ${t.id === activeId ? 'bg-secondary border-secondary-foreground' : 'bg-card border-border hover:bg-card/80'}`}
+                        >
+                          <span className="truncate flex items-center gap-1">
+                            {t.title || 'Untitled'}
+                          </span>
+                          <div className="flex items-center">
+                            {t.pinned && <Pin size={12} className="shrink-0 text-muted-foreground mr-1" />}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="w-7 h-7 flex items-center justify-center rounded-full">
+                                  <EllipsisVertical size={14} />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40 bg-card border-border text-foreground">
+                                <DropdownMenuItem onClick={() => {
+                                  setRenamingThreadId(t.id);
+                                  setRenameInputValue(t.title || '');
+                                }} className="cursor-pointer">
+                                  <Edit size={14} className="mr-2" /> Rename
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handlePinToggle(t.id)} className="cursor-pointer">
+                                  {t.pinned ? (
+                                    <><PinOff size={14} className="mr-2" /> Unpin</>
+                                  ) : (
+                                    <><Pin size={14} className="mr-2" /> Pin</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-zinc-700" />
+                                <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-red-400">
+                                  <Trash2 size={14} className="mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </>
@@ -235,7 +349,7 @@ export default function Home() {
                     setThreads(prev => [t, ...prev]);
                     setActiveId(t.id);
                   }}
-                  className="h-8 w-8 rounded-full bg-[#e42a42] hover:bg-[#cf243a] flex items-center justify-center mb-4 mx-auto shrink-0"
+                  className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center mb-4 mx-auto shrink-0"
                 >
                   <Plus size={14} />
                 </button>
@@ -246,17 +360,41 @@ export default function Home() {
                     const isActive = t.id === activeId;
                     const letter = (t.title || 'Untitled').trim()[0]?.toUpperCase() || 'N';
                     return (
-                      <button
-                        key={t.id}
-                        title={t.title || 'Untitled'}
-                        onClick={() => setActiveId(t.id)}
-                        className={`h-6 w-6 aspect-square rounded-full flex items-center justify-center transition-colors focus-visible:outline-none mx-auto shrink-0 
-                          ${isActive ? 'bg-white/20 ring-1 ring-white/30 ring-offset-1 ring-offset-black' : 'bg-white/5 hover:bg-white/10'}`}
-                      >
-                        <span className="text-[10px] font-semibold leading-none">
-                          {letter}
-                        </span>
-                      </button>
+                      <DropdownMenu key={t.id}>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            title={t.title || 'Untitled'}
+                            onClick={() => setActiveId(t.id)}
+                            className={`h-6 w-6 aspect-square rounded-full flex items-center justify-center transition-colors focus-visible:outline-none mx-auto shrink-0 
+                              ${isActive ? 'bg-secondary ring-1 ring-secondary-foreground ring-offset-1 ring-offset-background' : 'bg-card hover:bg-card/80'}`}
+                          >
+                            <span className="text-[10px] font-semibold leading-none flex items-center gap-0.5">
+                              {t.pinned && <Pin size={8} className="shrink-0 text-muted-foreground" />}
+                              {letter}
+                            </span>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 bg-card border-border text-foreground">
+                          <DropdownMenuItem onClick={() => {
+                            setRenamingThreadId(t.id);
+                            setRenameInputValue(t.title || '');
+                            setSidebarOpen(true); // Open sidebar to show input field
+                          }} className="cursor-pointer">
+                            <Edit size={14} className="mr-2" /> Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handlePinToggle(t.id)} className="cursor-pointer">
+                            {t.pinned ? (
+                              <><PinOff size={14} className="mr-2" /> Unpin</>
+                            ) : (
+                              <><Pin size={14} className="mr-2" /> Pin</>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-zinc-700" />
+                          <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-red-400">
+                            <Trash2 size={14} className="mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     );
                   })}
                 </div>
@@ -268,13 +406,13 @@ export default function Home() {
           {mobileSidebarOpen && (
             <div className="lg:hidden fixed inset-0 z-40">
               <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSidebarOpen(false)} />
-              <div className="absolute left-0 top-0 h-full w-72 bg-zinc-900/90 border-r border-white/10 p-3">
+              <div className="absolute left-0 top-0 h-full w-72 bg-card border-r border-border p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-[#e42a42]" />
-                    <h2 className="text-sm font-semibold">OpenSource Fiesta</h2>
+                    <h2 className="text-sm font-semibold">PentAI</h2>
                   </div>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="text-xs px-2 py-1 rounded bg-white/10">Close</button>
+                  <button onClick={() => setMobileSidebarOpen(false)} className="text-xs px-2 py-1 rounded bg-card border border-border">Close</button>
                 </div>
                 <button
                   onClick={() => {
@@ -291,7 +429,7 @@ export default function Home() {
                 <div className="h-[70vh] overflow-y-auto space-y-1 pr-1">
                   {threads.length === 0 && <div className="text-xs opacity-60">No chats yet</div>}
                   {threads.map(t => (
-                    <button key={t.id} onClick={() => { setActiveId(t.id); setMobileSidebarOpen(false); }} className={`w-full text-left px-2 py-2 rounded-md text-sm border ${t.id === activeId ? 'bg-white/15 border-white/20' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                    <button key={t.id} onClick={() => { setActiveId(t.id); setMobileSidebarOpen(false); }} className={`w-full text-left px-2 py-2 rounded-md text-sm border ${t.id === activeId ? 'bg-card border-border' : 'bg-card border-border hover:bg-card/80'}`}>
                       {t.title || 'Untitled'}
                     </button>
                   ))}
@@ -304,37 +442,11 @@ export default function Home() {
             {/* Top bar */}
           <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden text-xs px-2 py-1 rounded bg-white/10 border border-white/15">Menu</button>
-                <h1 className="text-lg font-semibold">OpenSource Fiesta</h1>
+                <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden text-xs px-2 py-1 rounded bg-card border border-border">Menu</button>
+                <h1 className="text-lg font-semibold">PentAI</h1>
               </div>
               <div className="flex items-center gap-2">
-                <a
-                  href="https://x.com/whyKislay"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs text-zinc-300 hover:text-white"
-                  title="Open Kislay on X"
-                >
-                  <Image
-                    src="/image.jpeg"
-                    alt="Kislay avatar"
-                    width={20}
-                    height={20}
-                    className="h-5 w-5 rounded-full object-cover"
-                  />
-                  <span className="opacity-90 hidden sm:inline text-sm">Made by <span className="font-semibold underline decoration-dotted">Kislay</span></span>
-                </a>
-                <a
-                  href="https://github.com/iKislay/Open-Fiesta"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded bg-[#e42a42] text-white border border-white/10 hover:bg-[#cf243a] ml-1"
-                  title="Star on GitHub"
-                >
-                  <Github size={14} />
-                  <span className="hidden sm:inline">Star on GitHub</span>
-                  <span className="sm:hidden">Star</span>
-                </a>
+                <ThemeToggler />
               </div>
             </div>
 
@@ -347,8 +459,8 @@ export default function Home() {
                 <button
                   key={m.id}
                   onClick={() => toggle(m.id)}
-                  className={`h-9 px-3 text-xs rounded-full text-white border flex items-center gap-2 bg-white/5 hover:bg-white/10 transition-colors ${
-                    m.good ? 'border-amber-300/40' : isFree ? 'border-emerald-300/40' : 'border-white/10'
+                  className={`h-9 px-3 text-xs rounded-full text-foreground dark:text-white border flex items-center gap-2 bg-card dark:bg-white/5 hover:bg-accent dark:hover:bg-white/10 transition-colors ${
+                    m.good ? 'border-amber-300/40' : isFree ? 'border-emerald-300/40' : 'border-border'
                   }`}
                   title="Click to toggle"
                 >
@@ -377,12 +489,12 @@ export default function Home() {
                 </button>
               );})}
               {selectedModels.length === 0 && (
-                <span className="text-xs text-zinc-400">No models selected</span>
+                <span className="text-xs text-muted-foreground">No models selected</span>
               )}
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => setModelsModalOpen(true)}
-                  className="text-xs px-2.5 py-1 rounded border border-white/15 bg-white/5 hover:bg-white/10"
+                  className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-card/80"
                 >
                   Change models
                 </button>
@@ -393,12 +505,12 @@ export default function Home() {
             {modelsModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center">
                 <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModelsModalOpen(false)} />
-                <div className="relative w-full max-w-2xl mx-auto rounded-2xl border border-white/10 bg-zinc-900/90 p-5 shadow-2xl">
+                <div className="relative w-full max-w-2xl mx-auto rounded-2xl border border-border bg-card p-5 shadow-2xl">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-base font-semibold tracking-wide">Select up to 5 models</h3>
                     <button onClick={() => setModelsModalOpen(false)} className="text-xs px-2 py-1 rounded bg-white/10">Close</button>
                   </div>
-                  <div className="text-xs text-zinc-300 mb-3">Selected: {selectedModels.length}/5</div>
+                  <div className="text-xs text-muted-foreground mb-3">Selected: {selectedModels.length}/5</div>
                   <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                     {(() => {
                       const buckets: Record<string, typeof MODEL_CATALOG> = {
@@ -437,7 +549,7 @@ export default function Home() {
                       const order: Array<keyof typeof buckets> = ['Favorites', 'Uncensored', 'Free', 'Good', 'Others'];
                       return order.filter((k) => buckets[k].length > 0).map((k) => (
                         <div key={k} className="space-y-2">
-                          <div className="text-xs uppercase tracking-wide text-zinc-300/80">{k}</div>
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">{k}</div>
                           <div className="flex flex-wrap gap-2">
                             {buckets[k].map((m) => {
                               const free = isFree(m);
@@ -495,7 +607,7 @@ export default function Home() {
             )}
 
             {/* Messages area */}
-            <div className="rounded-lg border border-white/10 bg-white/5 px-2 pt-5 overflow-x-auto flex-1 overflow-y-auto pb-28">
+            <div className="rounded-lg border border-border bg-card dark:border-white/10 dark:bg-white/5 px-2 pt-5 overflow-x-auto flex-1 overflow-y-auto pb-28 text-foreground">
               {selectedModels.length === 0 ? (
                 <div className="p-4 text-zinc-400">Select up to 5 models to compare.</div>
               ) : (
@@ -574,7 +686,7 @@ export default function Home() {
                           const ans = row.answers.find((a) => a.modelId === m.id);
                           return (
                             <div key={m.id} className="h-full">
-                              <div className={`group relative rounded-md p-3 h-full min-h-[160px] flex overflow-hidden ring-1 ${m.good ? 'bg-gradient-to-b from-amber-400/10 to-white/5 ring-amber-300/30' : isFree ? 'bg-gradient-to-b from-emerald-400/10 to-white/5 ring-emerald-300/30' : 'bg-white/5 ring-white/5'}`}>
+                              <div className={`group relative rounded-md p-3 h-full min-h-[160px] flex overflow-hidden ring-1 ${m.good ? 'bg-gradient-to-b from-amber-50/10 to-card ring-amber-300/30 dark:from-amber-400/10 dark:to-white/5' : isFree ? 'bg-gradient-to-b from-emerald-50/10 to-card ring-emerald-300/30 dark:from-emerald-400/10 dark:to-white/5' : 'bg-card dark:bg-white/5 dark:ring-white/5 ring-border'}`}>
                                 {ans && (
                                   <button
                                     onClick={() => {
@@ -622,12 +734,12 @@ export default function Home() {
                                       )}
                                     </>
                                   ) : loadingIds.includes(m.id) ? (
-                                    <div className="w-full self-stretch animate-pulse space-y-2">
-                                      <div className="h-2.5 w-1/3 rounded bg-[#e42a42]/30" />
-                                      <div className="h-2 rounded bg-white/10" />
-                                      <div className="h-2 rounded bg-white/10 w-5/6" />
-                                      <div className="h-2 rounded bg-white/10 w-2/3" />
-                                    </div>
+                                            <div className="w-full self-stretch animate-pulse space-y-2">
+                                                <div className="h-2.5 w-1/3 rounded bg-[#e42a42]/30" />
+                                                <div className="h-2 rounded bg-card" />
+                                                <div className="h-2 rounded bg-card w-5/6" />
+                                                <div className="h-2 rounded bg-card w-2/3" />
+                                              </div>
                                   ) : (
                                     <span className="opacity-40">No reply yet</span>
                                   )}
@@ -644,8 +756,11 @@ export default function Home() {
             </div>
 
             {/* Fixed bottom input line */}
-            <div className="fixed bottom-0 left-0 right-0 z-20 pt-2 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t from-black/70 to-transparent">
-              <div className="max-w-3xl mx-auto px-3">
+            <div className="fixed bottom-0 left-0 right-0 z-20 pt-2 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t dark:from-black/70 from-foreground/10 to-transparent">
+              <div
+                className="w-full px-3 lg:px-4 lg:pl-[var(--dashboard-sidebar-offset)]"
+                style={{ ['--dashboard-sidebar-offset' as any]: sidebarOpen ? 'calc(16rem + 1.5rem)' : 'calc(3.5rem + 1.5rem)' }}
+              >
                 <AiInput onSubmit={(text, imageDataUrl) => { send(text, imageDataUrl); }} loading={anyLoading} />
               </div>
             </div>

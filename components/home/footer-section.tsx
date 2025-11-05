@@ -8,17 +8,17 @@ export function FooterSection() {
       {/* Left Section: Logo, Description, Social Links */}
       <div className="flex flex-col justify-start items-start gap-8 p-4 md:p-8">
         <div className="flex gap-3 items-stretch justify-center">
-          <div className="text-center text-foreground text-xl font-semibold leading-4">(OpenSourced)-AI Fiesta</div>
+          <div className="text-center text-foreground text-xl font-semibold leading-4">PentAI</div>
         </div>
-        <p className="text-foreground/90 text-sm font-medium leading-[18px] text-left">Made By Kislay</p>
+        <p className="text-foreground/90 text-sm font-medium leading-[18px] text-left">Made By Nirma J Mali</p>
         <div className="flex justify-start items-start gap-3">
-          <a href="https://x.com/whyKislay" aria-label="Twitter" className="w-4 h-4 flex items-center justify-center">
+          <a href="#" aria-label="Twitter" className="w-4 h-4 flex items-center justify-center">
             <Twitter className="w-full h-full text-muted-foreground" />
           </a>
-          <a href="https://github.com/iKislay" aria-label="GitHub" className="w-4 h-4 flex items-center justify-center">
+          <a href="#" aria-label="GitHub" className="w-4 h-4 flex items-center justify-center">
             <Github className="w-full h-full text-muted-foreground" />
           </a>
-          <a href="https://www.linkedin.com/in/kislayy/" aria-label="LinkedIn" className="w-4 h-4 flex items-center justify-center">
+          <a href="#" aria-label="LinkedIn" className="w-4 h-4 flex items-center justify-center">
             <Linkedin className="w-full h-full text-muted-foreground" />
           </a>
         </div>

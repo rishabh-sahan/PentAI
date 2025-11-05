@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
-import { Globe, Paperclip, Send, Loader2, X } from "lucide-react"
+import { Paperclip, Send, Loader2, X, Plus, Globe } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
@@ -67,9 +67,9 @@ const AnimatedPlaceholder = ({ showSearch }: { showSearch: boolean }) => (
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -5 }}
       transition={{ duration: 0.1 }}
-      className="pointer-events-none w-[150px] text-sm absolute text-black/70 dark:text-white/70"
+      className="pointer-events-none w-[200px] text-sm absolute text-muted-foreground"
     >
-      {showSearch ? "Search the web..." : "Ask Anything..."}
+      Ask anything…
     </motion.p>
   </AnimatePresence>
 )
@@ -127,183 +127,73 @@ export function AiInput({ onSubmit, loading = false }: { onSubmit: (text: string
   }, [imagePreview])
   return (
     <div className="w-full py-4">
-      <div className="relative max-w-xl border rounded-[22px] border-black/5 p-1 w-full mx-auto">
-        <div className="relative rounded-2xl border border-black/5 bg-neutral-800/5 flex flex-col">
-          <div className="overflow-y-auto" style={{ maxHeight: `${MAX_HEIGHT}px` }}>
-            {imagePreview ? (
-              <div className="grid grid-cols-[96px_1fr] gap-3 p-3 pr-4">
-                <div className="relative h-[96px] w-[96px] rounded-xl overflow-hidden border border-white/10 shadow-sm">
-                  <Image
-                    className="object-cover h-full w-full"
-                    src={imagePreview}
-                    height={240}
-                    width={240}
-                    alt="attached image"
-                  />
-                  <button
-                    onClick={handelClose}
-                    className="absolute top-1.5 right-1.5 inline-flex items-center justify-center h-6 w-6 rounded-full bg-black/70 text-white hover:bg-black/80 border border-white/20"
-                    aria-label="Remove image"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <div className="relative rounded-xl bg-black/5 dark:bg-white/5 border border-white/10">
-                  <Textarea
-                    id="ai-input-04"
-                    value={value}
-                    placeholder=""
-                    className="w-full rounded-xl px-4 py-3 bg-transparent border-none text-white resize-none focus-visible:ring-0 leading-[1.2]"
-                    ref={textareaRef}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSubmit()
-                      }
-                    }}
-                    onChange={(e) => {
-                      setValue(e.target.value)
-                      adjustHeight()
-                    }}
-                  />
-                  {!value && (
-                    <div className="absolute left-4 top-3">
-                      <AnimatedPlaceholder showSearch={showSearch} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="relative">
-                <Textarea
-                  id="ai-input-04"
-                  value={value}
-                  placeholder=""
-                  className="w-full rounded-2xl rounded-b-none px-4 py-3 bg-black/5 dark:bg-white/5 border-none text-white resize-none focus-visible:ring-0 leading-[1.2]"
-                  ref={textareaRef}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit()
-                    }
-                  }}
-                  onChange={(e) => {
-                    setValue(e.target.value)
-                    adjustHeight()
-                  }}
-                />
-                {!value && (
-                  <div className="absolute left-4 top-3">
-                    <AnimatedPlaceholder showSearch={showSearch} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      <div className="relative w-full px-3 lg:px-4">
+        <div className="w-full flex items-center gap-3 rounded-full border border-border bg-card px-4 py-2 shadow-lg ring-1 ring-ring/20">
+          <label className="cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-full bg-secondary text-secondary-foreground border border-border">
+            <input type="file" ref={fileInputRef} onChange={handelChange} className="hidden" />
+            <Plus className="w-4 h-4" />
+          </label>
+          <div className="relative grow">
+            <Textarea
+              id="ai-input-04"
+              value={value}
+              placeholder=""
+              className="w-full bg-transparent border-none text-foreground resize-none focus-visible:ring-0 leading-[1.4] px-0 py-2 min-h-[44px] flex items-center"
+              ref={textareaRef}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSubmit()
+                }
+              }}
+              onChange={(e) => {
+                setValue(e.target.value)
+                adjustHeight()
+              }}
+            />
 
-          <div className="h-12 bg-black/5 dark:bg-white/5 rounded-b-xl">
-            <div className="absolute left-3 bottom-3 flex items-center gap-2">
-              <label
-                className={cn(
-                  "cursor-pointer relative rounded-full p-2 bg-black/5 dark:bg-white/5",
-                  imagePreview
-                    ? "bg-[#ff3f17]/15 border border-[#ff3f17] text-[#ff3f17]"
-                    : "text-white/60 hover:text-white"
-                )}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handelChange}
-                  className="hidden"
-                />
-                <Paperclip
-                  className={cn("w-4 h-4 transition-colors", imagePreview ? "text-[#ff3f17]" : "text-white/60 hover:text-white")}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSearch(!showSearch)
-                }}
-                className={cn(
-                  "rounded-full transition-all flex items-center gap-2 px-1.5 py-1 border h-8",
-                  showSearch
-                    ? "bg-[#ff3f17]/15 border-[#ff3f17] text-[#ff3f17]"
-                    : "bg-black/5 dark:bg-white/5 border-transparent text-white/60 hover:text-white"
-                )}
-              >
-                <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-                  <motion.div
-                    animate={{
-                      rotate: showSearch ? 180 : 0,
-                      scale: showSearch ? 1.1 : 1,
-                    }}
-                    whileHover={{
-                      rotate: showSearch ? 180 : 15,
-                      scale: 1.1,
-                      transition: {
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 10,
-                      },
-                    }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 260,
-                      damping: 25,
-                    }}
-                  >
-                    <Globe
-                      className={cn(
-                        "w-4 h-4",
-                        showSearch ? "text-[#ff3f17]" : "text-inherit"
-                      )}
-                    />
-                  </motion.div>
-                </div>
-                <AnimatePresence>
-                  {showSearch && (
-                    <motion.span
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{
-                        width: "auto",
-                        opacity: 1,
-                      }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-sm overflow-hidden whitespace-nowrap text-[#ff3f17] flex-shrink-0"
-                    >
-                      Search
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
-            </div>
-            <div className="absolute right-3 bottom-3">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className={cn(
-                  "rounded-full p-2 transition-colors",
-                  loading
-                    ? "bg-[#e42a42]/20 text-[#e42a42] cursor-not-allowed"
-                  : value
-                    ? "bg-[#ff3f17]/15 text-[#ff3f17]"
-                    : "bg-black/5 dark:bg-white/5 text-white/80 hover:text-white"
-                )}
-                disabled={loading}
-                aria-busy={loading}
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </button>
-            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowSearch((s) => !s)}
+            className={cn(
+              "inline-flex items-center gap-1.5 h-9 rounded-full border px-2.5 text-xs transition-all",
+              showSearch
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+            )}
+            title={showSearch ? "Search the web enabled" : "Enable web search"}
+          >
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline">{showSearch ? "Search" : "Off"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className={cn(
+              "inline-flex items-center justify-center w-9 h-9 rounded-full border shadow-sm transition-all",
+              loading || value.trim().length === 0
+                ? "bg-secondary text-muted-foreground border-border cursor-not-allowed opacity-60"
+                : "bg-primary text-primary-foreground border-border hover:brightness-95"
+            )}
+            disabled={loading || value.trim().length === 0}
+            aria-busy={loading}
+            aria-label="Send"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
         </div>
+        {imagePreview && (
+          <div className="absolute -top-28 left-2 flex items-center gap-2 bg-card border border-border rounded-xl p-2 shadow-lg">
+            <div className="relative h-[64px] w-[64px] rounded-lg overflow-hidden border border-border">
+              <Image className="object-cover h-full w-full" src={imagePreview} height={160} width={160} alt="attached image" />
+              <button onClick={handelClose} className="absolute top-1 right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-black/70 text-white border border-white/20" aria-label="Remove image">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            <span className="text-sm text-muted-foreground">Image attached</span>
+          </div>
+        )}
       </div>
     </div>
   )

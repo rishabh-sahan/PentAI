@@ -24,4 +24,5 @@ export type ChatThread = {
   title: string;
   messages: ChatMessage[];
   createdAt: number;
+  pinned?: boolean;
 };

@@ -1,5 +1,10 @@
 import { HeroSection } from "@/components/home/hero-section"
-import { DashboardPreview } from "@/components/home/dashboard-preview"
+import { FeaturesSection } from "@/components/home/features-section"
+import { ShowcaseSection } from "@/components/home/showcase-section"
+import { AboutSection } from "@/components/home/about-section"
+import { HowItWorksSection } from "@/components/home/how-it-works"
+import { IntegrationsSection } from "@/components/home/integrations-section"
+import { UseCasesSection } from "@/components/home/use-cases-section"
 import { PricingSection } from "@/components/home/pricing-section"
 import { FAQSection } from "@/components/home/faq-section"
 import { CTASection } from "@/components/home/cta-section"
@@ -12,13 +17,25 @@ export default function LandingPage() {
       <div className="relative z-10">
         <main className="max-w-[1320px] mx-auto relative">
           <HeroSection />
-          {/* Dashboard Preview Wrapper */}
-          <div className="absolute bottom-[-150px] md:bottom-[-400px] left-1/2 transform -translate-x-1/2 z-30 mb-44">
-            <AnimatedSection>
-              <DashboardPreview />
-            </AnimatedSection>
-          </div>
         </main>
+        <AnimatedSection id="features" className="relative z-10 max-w-[1320px] mx-auto" delay={0.12}>
+          <FeaturesSection />
+        </AnimatedSection>
+        <AnimatedSection className="relative z-10 max-w-[1320px] mx-auto" delay={0.14}>
+          <ShowcaseSection />
+        </AnimatedSection>
+        <AnimatedSection id="about" className="relative z-10 max-w-[1320px] mx-auto" delay={0.16}>
+          <AboutSection />
+        </AnimatedSection>
+        <AnimatedSection id="how-it-works" className="relative z-10 max-w-[1320px] mx-auto" delay={0.18}>
+          <HowItWorksSection />
+        </AnimatedSection>
+        <AnimatedSection id="integrations" className="relative z-10 max-w-[1320px] mx-auto" delay={0.2}>
+          <IntegrationsSection />
+        </AnimatedSection>
+        <AnimatedSection id="use-cases" className="relative z-10 max-w-[1320px] mx-auto" delay={0.22}>
+          <UseCasesSection />
+        </AnimatedSection>
         {/* <AnimatedSection
           id="pricing-section"
           className="relative z-10 max-w-[1320px] mx-auto mt-44 md:mt-64"
@@ -26,13 +43,13 @@ export default function LandingPage() {
         >
           <PricingSection />
         </AnimatedSection> */}
-        <AnimatedSection id="faq-section" className="relative z-10 max-w-[1320px] mx-auto mt-44 md:mt-64" delay={0.2}>
+        <AnimatedSection id="faq-section" className="relative z-10 max-w-[1320px] mx-auto mt-8 md:mt-10" delay={0.2}>
           <FAQSection />
         </AnimatedSection>
-        <AnimatedSection className="relative z-10 max-w-[1320px] mx-auto mt-8 md:mt-12" delay={0.2}>
+        <AnimatedSection className="relative z-10 max-w-[1320px] mx-auto mt-6 md:mt-8" delay={0.2}>
           <CTASection />
         </AnimatedSection>
-        <AnimatedSection className="relative z-10 max-w-[1320px] mx-auto mt-8 md:mt-16" delay={0.2}>
+        <AnimatedSection className="relative z-10 max-w-[1320px] mx-auto mt-6 md:mt-8" delay={0.2}>
           <FooterSection />
         </AnimatedSection>
       </div>

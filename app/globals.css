@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,73 +41,80 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Light theme colors — Luxury Ivory & Gold */
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Surfaces */
+  --background: oklch(0.985 0.005 100); /* soft ivory */
+  --foreground: oklch(0.18 0.02 260); /* rich graphite text */
+  --card: oklch(0.97 0.006 100); /* porcelain */
+  --card-foreground: oklch(0.22 0.02 260);
+  --popover: oklch(0.98 0.004 100);
+  --popover-foreground: oklch(0.2 0.02 260);
+  /* Brand accents */
+  --primary: oklch(0.78 0.12 85); /* luxury gold */
+  --primary-foreground: oklch(0.15 0.02 260);
+  --secondary: oklch(0.94 0.01 100); /* champagne tint */
+  --secondary-foreground: oklch(0.3 0.02 260);
+  --muted: oklch(0.93 0.008 260);
+  --muted-foreground: oklch(0.45 0.02 260);
+  --accent: oklch(0.52 0.07 255); /* deep sapphire */
+  --accent-foreground: oklch(0.98 0.004 100);
+  --destructive: oklch(0.62 0.19 30);
+  /* System tokens */
+  --border: oklch(0.86 0.01 260);
+  --input: oklch(0.9 0.01 260);
+  --ring: oklch(0.68 0.07 255);
+  /* Charts (harmonized) */
+  --chart-1: oklch(0.72 0.15 85); /* gold */
+  --chart-2: oklch(0.58 0.12 184); /* teal */
+  --chart-3: oklch(0.5 0.09 257); /* sapphire */
+  --chart-4: oklch(0.84 0.14 95); /* light gold */
+  --chart-5: oklch(0.64 0.17 35); /* copper */
+  /* Sidebar */
+  --sidebar: oklch(0.96 0.006 100);
+  --sidebar-foreground: oklch(0.22 0.02 260);
+  --sidebar-primary: oklch(0.78 0.12 85);
+  --sidebar-primary-foreground: oklch(0.15 0.02 260);
+  --sidebar-accent: oklch(0.92 0.01 100);
+  --sidebar-accent-foreground: oklch(0.28 0.02 260);
+  --sidebar-border: oklch(0.87 0.01 260);
+  --sidebar-ring: oklch(0.68 0.07 255);
 }
 
+/* Dark theme colors */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: oklch(0.08 0.01 270);
+  --foreground: oklch(0.95 0.01 270);
+  --card: oklch(0.12 0.01 270);
+  --card-foreground: oklch(0.95 0.01 270);
+  --popover: oklch(0.12 0.01 270);
+  --popover-foreground: oklch(0.95 0.01 270);
+  --primary: oklch(0.7 0.15 40);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.18 0.01 270);
+  --secondary-foreground: oklch(0.8 0.01 270);
+  --muted: oklch(0.18 0.01 270);
+  --muted-foreground: oklch(0.6 0.01 270);
+  --accent: oklch(0.25 0.03 270);
+  --accent-foreground: oklch(0.9 0.01 270);
+  --destructive: oklch(0.7 0.15 10);
+  --border: oklch(0.2 0.01 270);
+  --input: oklch(0.15 0.01 270);
+  --ring: oklch(0.4 0.01 270);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.15 0.01 270);
+  --sidebar-foreground: oklch(0.95 0.01 270);
+  --sidebar-primary: oklch(0.7 0.15 40);
+  --sidebar-primary-foreground: oklch(0.1 0 0);
+  --sidebar-accent: oklch(0.25 0.03 270);
+  --sidebar-accent-foreground: oklch(0.9 0.01 270);
+  --sidebar-border: oklch(0.25 0.01 270);
+  --sidebar-ring: oklch(0.45 0.01 270);
 }
 
 @layer base {
@@ -121,14 +126,43 @@
   }
 }
 
+/* Light-theme utility overrides to improve contrast on translucent whites
+   and zinc text utilities used throughout the dashboard */
+body:not(.dark) .bg-white\/5 {
+  background-color: color-mix(in oklab, var(--card) 92%, white 8%) !important;
+}
+body:not(.dark) .bg-white\/10 {
+  background-color: color-mix(in oklab, var(--card) 88%, white 12%) !important;
+}
+body:not(.dark) .bg-white\/15 {
+  background-color: color-mix(in oklab, var(--card) 82%, white 18%) !important;
+}
+body:not(.dark) .bg-white\/20 {
+  background-color: color-mix(in oklab, var(--card) 76%, white 24%) !important;
+}
+body:not(.dark) .border-white\/10,
+body:not(.dark) .border-white\/15,
+body:not(.dark) .border-white\/20 {
+  border-color: var(--border) !important;
+}
+body:not(.dark) .text-zinc-200,
+body:not(.dark) .text-zinc-300,
+body:not(.dark) .text-zinc-400,
+body:not(.dark) .text-zinc-500 {
+  color: var(--muted-foreground) !important;
+}
+body:not(.dark) .ring-white\/10 {
+  --tw-ring-color: color-mix(in oklab, var(--ring) 65%, white 35%) !important;
+}
+
 /* Themed scrollbars (applies to sidebar and all scroll areas) */
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: oklch(0.5 0 0 / 0.35) oklch(1 0 0 / 0.06);
+  scrollbar-color: oklch(0.5 0.01 270 / 0.35) oklch(0.15 0.01 270 / 0.06);
 }
 .dark * {
-  scrollbar-color: oklch(0.6 0.25 28 / 0.55) oklch(1 0 0 / 0.06); /* crimson thumb on dark track */
+  scrollbar-color: oklch(0.7 0.15 40 / 0.55) oklch(0.15 0.01 270 / 0.06); /* primary thumb on dark track */
 }
 
 /* WebKit (Chrome/Safari/Edge) */
@@ -137,14 +171,29 @@
   height: 10px;
 }
 *::-webkit-scrollbar-track {
-  background: oklch(1 0 0 / 0.06);
+  background: oklch(0.15 0.01 270 / 0.06);
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, color-mix(in oklab, #e42a42 60%, transparent), color-mix(in oklab, #e42a42 30%, transparent));
+  background: linear-gradient(180deg, color-mix(in oklab, oklch(0.7 0.15 40) 60%, transparent), color-mix(in oklab, oklch(0.7 0.15 40) 30%, transparent));
   border-radius: 9999px;
-  border: 2px solid oklch(0.145 0 0 / 0.4); /* dark inset border */
+  border: 2px solid oklch(0.1 0.02 270 / 0.4); /* dark inset border */
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, color-mix(in oklab, #e42a42 75%, transparent), color-mix(in oklab, #e42a42 45%, transparent));
+  background: linear-gradient(180deg, color-mix(in oklab, oklch(0.7 0.15 40) 75%, transparent), color-mix(in oklab, oklch(0.7 0.15 40) 45%, transparent));
+}
+
+/* Dashboard-wide text color enforcement */
+.dashboard-root {
+  color: #000 !important;
+}
+.dark .dashboard-root {
+  color: #fff !important;
+}
+/* Ensure common text-bearing elements inherit the enforced color */
+.dashboard-root :is(h1,h2,h3,h4,h5,h6,p,span,small,strong,em,a,li,label,div,button,input,textarea,code,pre,blockquote,th,td) {
+  color: inherit !important;
+}
+.dashboard-root svg {
+  color: inherit !important;
 }

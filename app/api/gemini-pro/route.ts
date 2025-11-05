@@ -4,8 +4,8 @@ import { NextRequest } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const { messages, apiKey: apiKeyFromBody, imageDataUrl } = await req.json();
-    const apiKey = apiKeyFromBody || process.env.GEMINI_API_KEY;
-    if (!apiKey) return new Response(JSON.stringify({ error: 'Missing Gemini API key' }), { status: 400 });
+    const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';
+    if (!apiKey) return new Response(JSON.stringify({ error: 'Missing Gemini API key. Add your own key in Settings.' }), { status: 400 });
     const geminiModel = 'gemini-2.5-pro';
 
     // Convert OpenAI-style messages to Gemini contents

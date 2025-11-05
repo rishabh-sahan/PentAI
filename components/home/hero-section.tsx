@@ -1,14 +1,29 @@
-import React from "react"
-import { Button } from "@/components/ui/button"
-import { Header } from "./header"
-import Link from "next/link"
-import { Star } from "lucide-react"
+"use client"
 
+import React, { useState } from "react"
+import { Header } from "./header"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { useAuth } from "@/context/AuthContext"
+import { LoginModal } from "@/components/auth/LoginModal"
+import { useRouter } from "next/navigation"
 export function HeroSection() {
+  const { session } = useAuth()
+  const router = useRouter()
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+
+  const handleGetStarted = () => {
+    if (session) {
+      router.push("/dashboard")
+    } else {
+      setIsLoginModalOpen(true)
+    }
+  }
+
   return (
     <section
-      className="flex flex-col items-center text-center relative mx-auto rounded-2xl overflow-hidden my-6 py-0 px-4
-         w-full h-[400px] md:w-[1220px] md:h-[600px] lg:h-[810px] md:px-0"
+      className="flex flex-col items-center text-center relative mx-auto rounded-2xl overflow-hidden my-4 py-0 px-3
+         w-full h-[360px] md:w-[1220px] md:h-[520px] lg:h-[680px] md:px-0"
     >
       {/* SVG Background */}
       <div className="absolute inset-0 z-0">
@@ -272,14 +287,12 @@ export function HeroSection() {
               <rect x="771.711" y="405" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
               <rect x="591.711" y="477" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.07" />
             </g>
-
             <g filter="url(#filter0_f_186_1134)">
               <path
                 d="M1447.45 -87.0203V-149.03H1770V1248.85H466.158V894.269C1008.11 894.269 1447.45 454.931 1447.45 -87.0203Z"
                 fill="url(#paint1_linear_186_1134)"
               />
             </g>
-
             <g filter="url(#filter1_f_186_1134)">
               <path
                 d="M1383.45 -151.02V-213.03H1706V1184.85H402.158V830.269C944.109 830.269 1383.45 390.931 1383.45 -151.02Z"
@@ -432,27 +445,37 @@ export function HeroSection() {
           </defs>
         </svg>
       </div>
-
       {/* Header positioned at top of hero container */}
       <div className="absolute top-0 left-0 right-0 z-20">
         <Header />
       </div>
 
-      <div className="relative z-10 space-y-4 md:space-y-5 lg:space-y-6 mb-6 md:mb-7 lg:mb-9 max-w-md md:max-w-[500px] lg:max-w-[588px] mt-16 md:mt-[120px] lg:mt-[160px] px-4">
-        <h1 className="text-foreground text-3xl md:text-4xl lg:text-6xl font-semibold leading-12">
-          World’s Smartest AIs. One Simple App.
+      <div className="relative z-10 space-y-3 md:space-y-4 lg:space-y-5 mb-4 md:mb-5 lg:mb-6 max-w-md md:max-w-[620px] lg:max-w-[760px] mt-10 md:mt-20 lg:mt-28 px-3">
+        <h1 className="text-foreground text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight">
+          Premium AI Workspace, Curated for Builders
         </h1>
-        <p className="text-muted-foreground text-base md:text-base lg:text-lg font-medium leading-relaxed max-w-lg mx-auto">
-          Tired of juggling multiple AI subscriptions and tabs? With AI Fiesta, you get access to all leading AI models in one place — for just $0/month. That’s less than half the cost of a single premium AI subscription.
+        <p className="text-muted-foreground text-base md:text-lg lg:text-xl font-medium leading-relaxed mx-auto">
+          PentAI brings the world’s best AI models into one refined experience. A luxurious, distraction‑free interface with powerful tools for code, content, and research.
         </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:gap-3">
+          <Button onClick={handleGetStarted} className="w-full sm:w-auto px-7 py-6 text-base md:text-lg font-medium bg-primary text-primary-foreground hover:opacity-95 shadow-lg shadow-primary/20">
+            Get Started
+          </Button>
+          <Link href="#features" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto px-7 py-6 text-base md:text-lg font-medium border-border hover:bg-secondary/50">
+              Explore Models
+            </Button>
+          </Link>
+        </div>
+        <div className="flex items-center justify-center gap-4 opacity-90">
+          <div className="text-sm md:text-base text-muted-foreground">No clutter</div>
+          <div className="h-1 w-1 rounded-full bg-muted-foreground/50" />
+          <div className="text-sm md:text-base text-muted-foreground">Privacy‑first</div>
+          <div className="h-1 w-1 rounded-full bg-muted-foreground/50" />
+          <div className="text-sm md:text-base text-muted-foreground">Beautifully fast</div>
+        </div>
       </div>
-
-      <Link href="https://github.com/iKislay/ai-Fiesta" target="_blank" rel="noopener noreferrer" className="">
-        <Button className="relative z-10 bg-secondary text-secondary-foreground hover:bg-secondary/90 px-8 py-3 rounded-full font-medium text-base shadow-lg ring-1 ring-white/10 hover:cursor-pointer transition-colors duration-200">
-          Star on GitHub
-          <Star className="ml-2 h-4 w-4 inline-block text-yellow-300" />
-        </Button>
-      </Link>
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </section>
   )
 }

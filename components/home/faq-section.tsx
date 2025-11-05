@@ -11,9 +11,9 @@ const faqData = [
       "It's completely open source! You can self-host it, contribute to the code, or even fork it to create your own version. We believe in transparency and community-driven development.",
   },
   {
-    question: "How is Open AI Fiesta different from individual subscriptions?",
+    question: "How is PentAI different from individual subscriptions?",
     answer:
-      "Instead of paying separately for ChatGPT, Claude, Gemini, Grok, Perplexity, or DeepSeek, Open-AI Fiesta gives you all of them in one chat window — plus features like Prompt Enhancer & Custom Projects.",
+      "Instead of paying separately for ChatGPT, Claude, Gemini, Grok, Perplexity, or DeepSeek, PentAI gives you all of them in one chat window — plus features like Prompt Enhancer & Custom Projects.",
   },
   {
     question: "Can I choose which AIs to use?",

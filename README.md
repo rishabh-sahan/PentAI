@@ -79,10 +79,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 👨‍💻 Credits
 
-**Created by Kislay**
-- LinkedIn: [linkedin.com/in/kislayy](https://www.linkedin.com/in/kislayy/)
-- Twitter: [@whyKislay](https://twitter.com/whyKislay)
-
 ---
 
 *Made with ❤️ for the open-source AI community*
