@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Github, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -26,6 +26,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       
       console.log('Attempting OAuth login with redirect URL:', redirectUrl);
       
+      const supabase = getSupabase();
       const { error } = await supabase.auth.signInWithOAuth({ 
         provider, 
         options: { 

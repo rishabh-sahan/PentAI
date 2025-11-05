@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabase } from '@/lib/supabaseClient';
 
 interface AuthContextType {
   session: Session | null;
@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      const supabase = getSupabase();
       await supabase.auth.signOut();
       setSession(null);
     } catch (error) {
@@ -26,17 +27,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    try {
+      const supabase = getSupabase();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setLoading(false);
+      });
 
-    return () => subscription.unsubscribe();
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setLoading(false);
+      });
+
+      return () => subscription.unsubscribe();
+    } catch (err) {
+      // If Supabase env vars are not set during prerender/build, quietly
+      // mark loading false and avoid throwing at import time.
+      console.warn('Supabase not configured:', err instanceof Error ? err.message : err);
+      setLoading(false);
+      return () => {};
+    }
   }, []);
 
   return (
