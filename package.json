@@ -1,6 +1,9 @@
 {
   "name": "PentAI",
   "version": "0.1.0",
+  "engines": {
+    "node": "18.x"
+  },
   "private": true,
   "author": {
     "name": "Nirma J Mali",
@@ -10,6 +13,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
