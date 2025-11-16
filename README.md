@@ -73,9 +73,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - Model access provided via [OpenRouter](https://openrouter.ai) and [Google AI](https://ai.google.dev)
 
-## 👨‍💻 Credits
-
----
-
 *Made with ❤️ for the open-source AI community*
-```
