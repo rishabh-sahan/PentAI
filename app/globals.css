@@ -126,35 +126,6 @@
   }
 }
 
-/* Light-theme utility overrides to improve contrast on translucent whites
-   and zinc text utilities used throughout the dashboard */
-body:not(.dark) .bg-white\/5 {
-  background-color: color-mix(in oklab, var(--card) 92%, white 8%) !important;
-}
-body:not(.dark) .bg-white\/10 {
-  background-color: color-mix(in oklab, var(--card) 88%, white 12%) !important;
-}
-body:not(.dark) .bg-white\/15 {
-  background-color: color-mix(in oklab, var(--card) 82%, white 18%) !important;
-}
-body:not(.dark) .bg-white\/20 {
-  background-color: color-mix(in oklab, var(--card) 76%, white 24%) !important;
-}
-body:not(.dark) .border-white\/10,
-body:not(.dark) .border-white\/15,
-body:not(.dark) .border-white\/20 {
-  border-color: var(--border) !important;
-}
-body:not(.dark) .text-zinc-200,
-body:not(.dark) .text-zinc-300,
-body:not(.dark) .text-zinc-400,
-body:not(.dark) .text-zinc-500 {
-  color: var(--muted-foreground) !important;
-}
-body:not(.dark) .ring-white\/10 {
-  --tw-ring-color: color-mix(in oklab, var(--ring) 65%, white 35%) !important;
-}
-
 /* Themed scrollbars (applies to sidebar and all scroll areas) */
 /* Firefox */
 * {
@@ -183,17 +154,20 @@ body:not(.dark) .ring-white\/10 {
   background: linear-gradient(180deg, color-mix(in oklab, oklch(0.7 0.15 40) 75%, transparent), color-mix(in oklab, oklch(0.7 0.15 40) 45%, transparent));
 }
 
-/* Dashboard-wide text color enforcement */
 .dashboard-root {
-  color: #000 !important;
+  color: var(--foreground);
+  background:
+    radial-gradient(circle at top left, color-mix(in oklab, var(--primary) 16%, transparent), transparent 32rem),
+    linear-gradient(180deg, color-mix(in oklab, var(--background) 92%, var(--card) 8%), var(--background));
 }
-.dark .dashboard-root {
-  color: #fff !important;
+
+.surface-panel {
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  border-color: color-mix(in oklab, var(--border) 88%, transparent);
+  box-shadow: 0 18px 60px color-mix(in oklab, var(--foreground) 10%, transparent);
 }
-/* Ensure common text-bearing elements inherit the enforced color */
-.dashboard-root :is(h1,h2,h3,h4,h5,h6,p,span,small,strong,em,a,li,label,div,button,input,textarea,code,pre,blockquote,th,td) {
-  color: inherit !important;
-}
-.dashboard-root svg {
-  color: inherit !important;
+
+.dark .surface-panel {
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  box-shadow: 0 18px 70px color-mix(in oklab, black 34%, transparent);
 }

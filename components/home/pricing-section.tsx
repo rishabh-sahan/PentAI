@@ -18,11 +18,11 @@ export function PricingSection() {
         "Basic integration logos",
         "Single MCP server connection",
         "Up to 2 AI coding agents",
-        "Vercel deployments with Pointer branding",
+        "PentAI workspace updates",
       ],
       buttonText: "Get Started",
       buttonClass:
-        "bg-zinc-300 shadow-[0px_1px_1px_-0.5px_rgba(16,24,40,0.20)] outline outline-0.5 outline-[#1e29391f] outline-offset-[-0.5px] text-gray-800 text-shadow-[0px_1px_1px_rgba(16,24,40,0.08)] hover:bg-zinc-400",
+        "bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90",
     },
     {
       name: "Pro",
@@ -40,7 +40,7 @@ export function PricingSection() {
       ],
       buttonText: "Join now",
       buttonClass:
-        "bg-primary-foreground shadow-[0px_1px_1px_-0.5px_rgba(16,24,40,0.20)] text-primary text-shadow-[0px_1px_1px_rgba(16,24,40,0.08)] hover:bg-primary-foreground/90",
+        "bg-primary-foreground text-primary hover:bg-primary-foreground/90",
       popular: true,
     },
     {
@@ -57,7 +57,7 @@ export function PricingSection() {
       ],
       buttonText: "Talk to Sales",
       buttonClass:
-        "bg-secondary shadow-[0px_1px_1px_-0.5px_rgba(16,24,40,0.20)] text-secondary-foreground text-shadow-[0px_1px_1px_rgba(16,24,40,0.08)] hover:bg-secondary/90",
+        "bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90",
     },
   ]
 
@@ -80,7 +80,7 @@ export function PricingSection() {
               className={`pl-2 pr-1 py-1 flex justify-start items-start gap-2 rounded-md ${isAnnual ? "bg-accent shadow-[0px_1px_1px_-0.5px_rgba(0,0,0,0.08)]" : ""}`}
             >
               <span
-                className={`text-center text-sm font-medium leading-tight ${isAnnual ? "text-accent-foreground" : "text-zinc-400"}`}
+                className={`text-center text-sm font-medium leading-tight ${isAnnual ? "text-accent-foreground" : "text-muted-foreground"}`}
               >
                 Annually
               </span>
@@ -90,7 +90,7 @@ export function PricingSection() {
               className={`px-2 py-1 flex justify-start items-start rounded-md ${!isAnnual ? "bg-accent shadow-[0px_1px_1px_-0.5px_rgba(0,0,0,0.08)]" : ""}`}
             >
               <span
-                className={`text-center text-sm font-medium leading-tight ${!isAnnual ? "text-accent-foreground" : "text-zinc-400"}`}
+                className={`text-center text-sm font-medium leading-tight ${!isAnnual ? "text-accent-foreground" : "text-muted-foreground"}`}
               >
                 Monthly
               </span>
@@ -102,17 +102,16 @@ export function PricingSection() {
         {pricingPlans.map((plan) => (
           <div
             key={plan.name}
-            className={`flex-1 p-4 overflow-hidden rounded-xl flex flex-col justify-start items-start gap-6 ${plan.popular ? "bg-primary shadow-[0px_4px_8px_-2px_rgba(0,0,0,0.10)]" : "bg-gradient-to-b from-gray-50/5 to-gray-50/0"}`}
-            style={plan.popular ? {} : { outline: "1px solid hsl(var(--border))", outlineOffset: "-1px" }}
+            className={`flex-1 p-4 overflow-hidden rounded-lg border flex flex-col justify-start items-start gap-6 ${plan.popular ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/15" : "bg-card border-border"}`}
           >
             <div className="self-stretch flex flex-col justify-start items-start gap-6">
               <div className="self-stretch flex flex-col justify-start items-start gap-8">
                 <div
-                  className={`w-full h-5 text-sm font-medium leading-tight ${plan.popular ? "text-primary-foreground" : "text-zinc-200"}`}
+                  className={`w-full h-5 text-sm font-medium leading-tight ${plan.popular ? "text-primary-foreground" : "text-foreground"}`}
                 >
                   {plan.name}
                   {plan.popular && (
-                    <div className="ml-2 px-2 overflow-hidden rounded-full justify-center items-center gap-2.5 inline-flex mt-0 py-0.5 bg-gradient-to-b from-primary-light/50 to-primary-light bg-white">
+                    <div className="ml-2 px-2 overflow-hidden rounded-full justify-center items-center gap-2.5 inline-flex mt-0 py-0.5 bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
                       <div className="text-center text-primary-foreground text-xs font-normal leading-tight break-words">
                         Popular
                       </div>
@@ -122,7 +121,7 @@ export function PricingSection() {
                 <div className="self-stretch flex flex-col justify-start items-start gap-1">
                   <div className="flex justify-start items-center gap-1.5">
                     <div
-                      className={`relative h-10 flex items-center text-3xl font-medium leading-10 ${plan.popular ? "text-primary-foreground" : "text-zinc-50"}`}
+                      className={`relative h-10 flex items-center text-3xl font-medium leading-10 ${plan.popular ? "text-primary-foreground" : "text-foreground"}`}
                     >
                       <span className="invisible">{isAnnual ? plan.annualPrice : plan.monthlyPrice}</span>
                       <span
@@ -149,13 +148,13 @@ export function PricingSection() {
                       </span>
                     </div>
                     <div
-                      className={`text-center text-sm font-medium leading-tight ${plan.popular ? "text-primary-foreground/70" : "text-zinc-400"}`}
+                      className={`text-center text-sm font-medium leading-tight ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}
                     >
                       /month
                     </div>
                   </div>
                   <div
-                    className={`self-stretch text-sm font-medium leading-tight ${plan.popular ? "text-primary-foreground/70" : "text-zinc-400"}`}
+                    className={`self-stretch text-sm font-medium leading-tight ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}
                   >
                     {plan.description}
                   </div>
@@ -166,7 +165,7 @@ export function PricingSection() {
               >
                 <div className="px-1.5 flex justify-center items-center gap-2">
                   <span
-                    className={`text-center text-sm font-medium leading-tight ${plan.name === "Free" ? "text-gray-800" : plan.name === "Pro" ? "text-primary" : "text-zinc-950"}`}
+                    className={`text-center text-sm font-medium leading-tight ${plan.name === "Pro" ? "text-primary" : ""}`}
                   >
                     {plan.buttonText}
                   </span>

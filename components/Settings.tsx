@@ -28,10 +28,10 @@ export default function Settings() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-background/60 dark:bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card text-foreground p-4 shadow-2xl">
+          <div className="surface-panel relative mx-3 w-full max-w-lg rounded-lg border bg-card text-foreground p-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-semibold">API Keys</h2>
               <button onClick={() => setOpen(false)} className="text-sm opacity-75 hover:opacity-100">Close</button>

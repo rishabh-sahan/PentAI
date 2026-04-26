@@ -1,57 +1,60 @@
 "use client"
 
-import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Database, Eye, LockKeyhole, Server } from "lucide-react"
+
+const principles = [
+  {
+    title: "Local key storage",
+    body: "API keys are kept in browser localStorage and sent only when making your model requests.",
+    icon: LockKeyhole,
+  },
+  {
+    title: "Transparent providers",
+    body: "Gemini and OpenRouter are separated clearly so users know which key and account each model uses.",
+    icon: Server,
+  },
+  {
+    title: "No hidden model magic",
+    body: "Free, paid, pro, and special model labels are visible in the selector and comparison row.",
+    icon: Eye,
+  },
+  {
+    title: "Persistent workspace",
+    body: "Selected models, chat threads, pinned chats, and active sessions stay ready between visits.",
+    icon: Database,
+  },
+]
 
 export function AboutSection() {
   return (
-    <section id="about" className="w-full max-w-[1320px] mx-auto px-5 mt-12 md:mt-16">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-stretch">
-        <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-6 md:p-8">
-            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight mb-3">What is PentAI?</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              PentAI is a premium AI workspace that unifies multiple leading models in a single, elegant interface. 
-              Switch between models instantly, keep conversations organized, and focus on outcomes — not tabs.
-            </p>
-            <ul className="mt-5 space-y-3 text-sm md:text-base">
-              <li className="flex gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-primary/70"/> Unified access to GPT, Claude, Gemini (and more)</li>
-              <li className="flex gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-primary/70"/> Thoughtfully designed UI with fast, polished interactions</li>
-              <li className="flex gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-primary/70"/> Privacy‑first approach; transparent settings and controls</li>
-              <li className="flex gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-primary/70"/> Built with modern Web tooling for reliability and speed</li>
-            </ul>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card/60">
-          <CardContent className="p-6 md:p-8">
-            <h3 className="text-xl md:text-2xl font-semibold mb-3">Why we built it</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Great tools should feel invisible. PentAI eliminates switching costs and helps you get from idea to result
-              with the least friction. It’s for developers, creators, and researchers who value both power and taste.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
-              <div className="rounded-xl border border-border p-4">
-                <div className="text-2xl font-semibold">1</div>
-                <div className="text-muted-foreground mt-1">Refined UX</div>
-              </div>
-              <div className="rounded-xl border border-border p-4">
-                <div className="text-2xl font-semibold">2</div>
-                <div className="text-muted-foreground mt-1">Unified Models</div>
-              </div>
-              <div className="rounded-xl border border-border p-4">
-                <div className="text-2xl font-semibold">3</div>
-                <div className="text-muted-foreground mt-1">Privacy‑first</div>
-              </div>
-              <div className="rounded-xl border border-border p-4">
-                <div className="text-2xl font-semibold">4</div>
-                <div className="text-muted-foreground mt-1">Fast & Reliable</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <section id="security" className="mx-auto w-full max-w-[1320px] px-5 py-16 md:py-24">
+      <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div>
+          <div className="text-sm font-semibold uppercase tracking-wide text-primary">Privacy by design</div>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
+            A BYOK workspace that stays honest about what it is doing.
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            PentAI is designed for users who want control. It does not pretend every provider is the same, and it keeps the important model and key decisions visible.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {principles.map((principle) => {
+            const Icon = principle.icon
+            return (
+              <Card key={principle.title} className="rounded-lg border-border/70 bg-card/70 py-0 shadow-sm">
+                <CardContent className="p-5">
+                  <Icon className="h-5 w-5 text-primary" />
+                  <h3 className="mt-4 font-semibold">{principle.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{principle.body}</p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
 }
-
-

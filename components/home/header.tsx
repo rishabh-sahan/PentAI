@@ -20,11 +20,11 @@ import {
 
 export function Header() {
   const navItems = [
-    { name: "Features", href: "#features" },
-    { name: "About", href: "#about" },
-    { name: "How it works", href: "#how-it-works" },
-    { name: "Integrations", href: "#integrations" },
+    { name: "Compare", href: "#compare" },
+    { name: "Workflow", href: "#workflow" },
+    { name: "Security", href: "#security" },
     { name: "Use cases", href: "#use-cases" },
+    { name: "FAQ", href: "#faq-section" },
   ]
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -55,11 +55,11 @@ export function Header() {
   };
 
   return (
-    <header className="w-full py-4 px-6">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <header className="w-full px-5 py-4">
+      <div className="mx-auto flex max-w-[1320px] items-center justify-between rounded-lg border border-border bg-background/82 px-4 py-3 shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <span className="text-foreground text-xl font-semibold">PentAI</span>
+            <span className="text-foreground text-xl font-semibold tracking-tight">PentAI</span>
           </div>
           <nav className="hidden md:flex items-center gap-2">
             {navItems.map((item) => (
@@ -67,7 +67,7 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 onClick={(e) => handleScroll(e, item.href)}
-                className="text-[#888888] hover:text-foreground px-4 py-2 rounded-full font-medium transition-colors"
+                className="text-muted-foreground hover:text-foreground px-4 py-2 rounded-md font-medium transition-colors hover:bg-background/60"
               >
                 {item.name}
               </Link>
@@ -76,12 +76,12 @@ export function Header() {
         </div>
         <div className="flex items-center gap-4">
           {loading ? (
-            <div className="w-24 h-9 bg-gray-700 rounded-full animate-pulse" />
+            <div className="w-24 h-9 bg-muted rounded-md animate-pulse" />
           ) : session ? (
             <div className="flex items-center gap-3">
               <Link href="/dashboard" rel="noopener noreferrer" className="hidden md:block">
                 <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-2 rounded-full font-medium shadow-sm transition-colors cursor-pointer">
-                  Go to Dashboard
+                  Dashboard
                 </Button>
               </Link>
               
@@ -90,7 +90,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="outline"
-                    className="border-border text-foreground hover:bg-muted px-4 py-2 rounded-full font-medium shadow-sm transition-colors cursor-pointer"
+                    className="border-border text-foreground hover:bg-muted px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
                   >
                     <User className="h-4 w-4 mr-2" />
                     {session.user?.user_metadata?.name || 'Profile'}
@@ -112,7 +112,7 @@ export function Header() {
           ) : (
             <button 
               onClick={() => setIsLoginModalOpen(true)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 rounded-full font-medium shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-md font-medium shadow-sm"
             >
               Login
             </button>
@@ -135,7 +135,7 @@ export function Header() {
                     key={item.name}
                     href={item.href}
                     onClick={(e) => handleScroll(e, item.href)}
-                    className="text-[#888888] hover:text-foreground justify-start text-lg py-2"
+                    className="text-muted-foreground hover:text-foreground justify-start text-lg py-2"
                   >
                     {item.name}
                   </Link>
@@ -144,7 +144,7 @@ export function Header() {
                   <div className="flex flex-col gap-3 mt-4">
                     <Link href="/dashboard" className="w-full">
                       <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-2 rounded-full font-medium shadow-sm w-full">
-                        Go to Dashboard
+                        Dashboard
                       </Button>
                     </Link>
                     <div className="flex flex-col space-y-1 p-2 border rounded-md">
@@ -161,11 +161,9 @@ export function Header() {
                     </div>
                   </div>
                 ) : (
-                  <Link href="https://vercel.com/home" target="_blank" rel="noopener noreferrer" className="w-full mt-4">
-                    <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-2 rounded-full font-medium shadow-sm">
-                      Try for Free
-                    </Button>
-                  </Link>
+                  <Button onClick={() => setIsLoginModalOpen(true)} className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 rounded-md font-medium shadow-sm">
+                    Login
+                  </Button>
                 )}
               </nav>
             </SheetContent>

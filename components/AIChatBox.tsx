@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
-import { Paperclip, Send, Loader2, X, Plus, Globe } from "lucide-react"
+import { Send, Loader2, X, Plus, Globe } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
@@ -128,7 +128,7 @@ export function AiInput({ onSubmit, loading = false }: { onSubmit: (text: string
   return (
     <div className="w-full py-4">
       <div className="relative w-full px-3 lg:px-4">
-        <div className="w-full flex items-center gap-3 rounded-full border border-border bg-card px-4 py-2 shadow-lg ring-1 ring-ring/20">
+        <div className="w-full flex items-center gap-3 rounded-lg border border-border bg-card/95 px-3 py-2 shadow-lg ring-1 ring-ring/15 backdrop-blur">
           <label className="cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-full bg-secondary text-secondary-foreground border border-border">
             <input type="file" ref={fileInputRef} onChange={handelChange} className="hidden" />
             <Plus className="w-4 h-4" />
@@ -157,7 +157,7 @@ export function AiInput({ onSubmit, loading = false }: { onSubmit: (text: string
             type="button"
             onClick={() => setShowSearch((s) => !s)}
             className={cn(
-              "inline-flex items-center gap-1.5 h-9 rounded-full border px-2.5 text-xs transition-all",
+              "inline-flex items-center gap-1.5 h-9 rounded-md border px-2.5 text-xs transition-all",
               showSearch
                 ? "bg-primary/10 text-primary border-primary/30"
                 : "bg-secondary text-muted-foreground border-border hover:text-foreground"
@@ -171,7 +171,7 @@ export function AiInput({ onSubmit, loading = false }: { onSubmit: (text: string
             type="button"
             onClick={handleSubmit}
             className={cn(
-              "inline-flex items-center justify-center w-9 h-9 rounded-full border shadow-sm transition-all",
+              "inline-flex items-center justify-center w-9 h-9 rounded-md border shadow-sm transition-all",
               loading || value.trim().length === 0
                 ? "bg-secondary text-muted-foreground border-border cursor-not-allowed opacity-60"
                 : "bg-primary text-primary-foreground border-border hover:brightness-95"

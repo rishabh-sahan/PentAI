@@ -1,49 +1,62 @@
 "use client"
 
-import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { LogIn, MessageSquare, LayoutDashboard } from "lucide-react"
+import { KeyRound, MessageSquarePlus, MousePointerClick, PanelsTopLeft } from "lucide-react"
+
+const steps = [
+  {
+    title: "Sign in",
+    description: "Start from the homepage and land in a persistent dashboard session.",
+    icon: MousePointerClick,
+  },
+  {
+    title: "Add keys",
+    description: "Paste Gemini and OpenRouter keys into the settings modal when needed.",
+    icon: KeyRound,
+  },
+  {
+    title: "Choose models",
+    description: "Pick up to five models from grouped free, paid, and Gemini sections.",
+    icon: PanelsTopLeft,
+  },
+  {
+    title: "Compare answers",
+    description: "Ask once, review every model answer, then copy the best result.",
+    icon: MessageSquarePlus,
+  },
+]
 
 export function HowItWorksSection() {
-  const steps = [
-    {
-      title: "Login securely",
-      description: "Authenticate to your workspace and keep your data private.",
-      icon: LogIn,
-    },
-    {
-      title: "Pick a model",
-      description: "Choose GPT, Claude, Gemini and start creating in seconds.",
-      icon: MessageSquare,
-    },
-    {
-      title: "Work in your Dashboard",
-      description: "Organize chats, iterate quickly, and stay in flow.",
-      icon: LayoutDashboard,
-    },
-  ]
-
   return (
-    <section id="how-it-works" className="w-full max-w-[1320px] mx-auto px-5 mt-12 md:mt-16">
-      <h2 className="text-center text-2xl md:text-4xl font-semibold tracking-tight mb-6">How it works</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-        {steps.map((s) => {
-          const Icon = s.icon
-          return (
-            <Card key={s.title} className="border-border/60 bg-card/60">
-              <CardContent className="p-6">
-                <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-semibold mb-1">{s.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{s.description}</p>
-              </CardContent>
-            </Card>
-          )
-        })}
+    <section id="workflow" className="border-y border-border bg-card/35">
+      <div className="mx-auto w-full max-w-[1320px] px-5 py-16 md:py-24">
+        <div className="max-w-2xl">
+          <div className="text-sm font-semibold uppercase tracking-wide text-primary">Workflow</div>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
+            From login to better answers in four moves.
+          </h2>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-4">
+          {steps.map((step, index) => {
+            const Icon = step.icon
+            return (
+              <Card key={step.title} className="rounded-lg border-border/70 bg-background/70 py-0 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-sm font-semibold text-muted-foreground">0{index + 1}</span>
+                  </div>
+                  <h3 className="mt-5 font-semibold">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
 }
-
-

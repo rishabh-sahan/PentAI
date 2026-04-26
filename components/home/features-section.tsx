@@ -1,61 +1,72 @@
 "use client"
 
-import React from "react"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, Shield, Zap } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { GitCompareArrows, KeyRound, MessageSquareText, Pin, RefreshCw, Settings2 } from "lucide-react"
+
+const features = [
+  {
+    title: "Parallel model replies",
+    description: "Send one prompt and compare multiple responses in aligned columns.",
+    icon: GitCompareArrows,
+  },
+  {
+    title: "Bring your own keys",
+    description: "OpenRouter and Gemini keys are saved locally and used only for your requests.",
+    icon: KeyRound,
+  },
+  {
+    title: "Live OpenRouter catalog",
+    description: "Refresh available models and hide unavailable options automatically.",
+    icon: RefreshCw,
+  },
+  {
+    title: "Threaded workspace",
+    description: "Create, rename, pin, and delete chats without leaving the dashboard.",
+    icon: Pin,
+  },
+  {
+    title: "Model controls",
+    description: "Select up to five models, group free and paid options, and change anytime.",
+    icon: Settings2,
+  },
+  {
+    title: "Markdown answers",
+    description: "Readable code blocks, inline code, emphasis, and copy actions are built in.",
+    icon: MessageSquareText,
+  },
+]
 
 export function FeaturesSection() {
-  const features = [
-    {
-      title: "Unified Models",
-      description:
-        "Access GPT, Claude, Gemini and more in one seamless interface designed for focus.",
-      icon: Sparkles,
-    },
-    {
-      title: "Private by Default",
-      description:
-        "Your data stays yours. Local controls and transparent settings built‑in.",
-      icon: Shield,
-    },
-    {
-      title: "Blazing Performance",
-      description:
-        "Fast interactions with polished UX. Minimal, thoughtful animations and feedback.",
-      icon: Zap,
-    },
-  ]
-
   return (
-    <section id="features" className="w-full max-w-[1320px] mx-auto px-5 mt-12 md:mt-16">
-      <div className="text-center mb-6 md:mb-8">
-        <Badge variant="secondary" className="px-3 py-1 rounded-full">Why PentAI</Badge>
-        <h2 className="mt-4 text-2xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
-          A refined toolkit for everyday creation
-        </h2>
-        <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-          Thoughtfully designed surfaces and controls that feel premium — in light and dark.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-        {features.map((f) => {
-          const Icon = f.icon
-          return (
-            <Card key={f.title} className="border-border/60 bg-card/60 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="h-11 w-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-              </CardContent>
-            </Card>
-          )
-        })}
+    <section id="compare" className="mx-auto w-full max-w-[1320px] px-5 py-16 md:py-24">
+      <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+        <div>
+          <Badge variant="secondary" className="rounded-md px-3 py-1">Built for comparison</Badge>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
+            One prompt, multiple perspectives, cleaner decisions.
+          </h2>
+          <p className="mt-4 max-w-xl text-muted-foreground">
+            PentAI is not a generic chat wrapper. It is a comparison desk for choosing the strongest answer, fastest draft, or clearest explanation from the models you already use.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {features.map((feature) => {
+            const Icon = feature.icon
+            return (
+              <Card key={feature.title} className="rounded-lg border-border/70 bg-card/70 py-0 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-semibold">{feature.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
 }
-
-

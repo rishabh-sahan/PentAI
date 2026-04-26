@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, useEffect, type CSSProperties } from "react";
+import { useMemo, useState, useEffect, useCallback, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Plus, Star, Check, EllipsisVertical, Pin, PinOff, Trash2, Edit } from "lucide-react";
 import Settings from "@/components/Settings";
 import { useLocalStorage } from "@/lib/useLocalStorage";
@@ -10,13 +10,20 @@ import {
   isOpenRouterPaidModel,
 } from "@/lib/models";
 import { AiModel, ChatMessage, ApiKeys, ChatThread } from "@/lib/types";
-import { callGemini, callOpenRouter } from "@/lib/client";
+import { callGemini, callOpenRouter, fetchOpenRouterLiveModels, type OpenRouterLiveModel } from "@/lib/client";
 import { AiInput } from "@/components/AIChatBox";
 import MarkdownLite from "@/components/MarkdownLite";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import ThemeToggler from "@/components/ThemeToggler";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+
+const normalizeModelId = (id: string) => id.trim().toLowerCase();
+const makeLiveModelUiId = (id: string) =>
+  `openrouter-live-${normalizeModelId(id)}`
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 
 export default function Home() {
   const [selectedIds, setSelectedIds] = useLocalStorage<string[]>(
@@ -37,13 +44,63 @@ export default function Home() {
   const [modelsModalOpen, setModelsModalOpen] = useState(false);
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
   const [renameInputValue, setRenameInputValue] = useState<string>('');
+  const [liveOpenRouterModels, setLiveOpenRouterModels] = useState<OpenRouterLiveModel[] | null>(null);
+  const [liveOpenRouterLoading, setLiveOpenRouterLoading] = useState(false);
+  const [liveOpenRouterError, setLiveOpenRouterError] = useState<string | null>(null);
+  const [liveSyncedAt, setLiveSyncedAt] = useState<number | null>(null);
   const activeThread = useMemo(() => threads.find(t => t.id === activeId) || null, [threads, activeId]);
   const messages = useMemo(() => activeThread?.messages ?? [], [activeThread]);
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
-  const selectedModels = useMemo(() => MODEL_CATALOG.filter(m => selectedIds.includes(m.id)), [selectedIds]);
-  const openRouterFreeModels = useMemo(() => MODEL_CATALOG.filter(isOpenRouterFreeModel), []);
-  const openRouterPaidModels = useMemo(() => MODEL_CATALOG.filter(isOpenRouterPaidModel), []);
-  const geminiModels = useMemo(() => MODEL_CATALOG.filter((m) => m.provider === 'gemini'), []);
+
+  const liveOpenRouterFreeCatalog = useMemo<AiModel[]>(() => {
+    if (!liveOpenRouterModels) return [];
+    return liveOpenRouterModels
+      .filter((m) => m.isFree && normalizeModelId(m.id) !== "openrouter/free")
+      .map((m) => ({
+        id: makeLiveModelUiId(m.id),
+        label: /\(free\)/i.test(m.name) ? m.name : `${m.name} (free)`,
+        provider: "openrouter" as const,
+        model: m.id,
+        free: true,
+      }));
+  }, [liveOpenRouterModels]);
+
+  const mergedCatalog = useMemo<AiModel[]>(() => {
+    const byModel = new Map<string, AiModel>();
+    for (const m of MODEL_CATALOG) {
+      byModel.set(normalizeModelId(m.model), m);
+    }
+    for (const m of liveOpenRouterFreeCatalog) {
+      const key = normalizeModelId(m.model);
+      if (!byModel.has(key)) {
+        byModel.set(key, m);
+      }
+    }
+    return Array.from(byModel.values());
+  }, [liveOpenRouterFreeCatalog]);
+
+  const liveOpenRouterIdSet = useMemo(
+    () => (liveOpenRouterModels ? new Set(liveOpenRouterModels.map((m) => normalizeModelId(m.id))) : null),
+    [liveOpenRouterModels]
+  );
+  const availableModelCatalog = useMemo(
+    () => mergedCatalog.filter((m) => m.provider !== 'openrouter' || !liveOpenRouterIdSet || liveOpenRouterIdSet.has(normalizeModelId(m.model))),
+    [mergedCatalog, liveOpenRouterIdSet]
+  );
+  const selectedModels = useMemo(() => availableModelCatalog.filter(m => selectedIds.includes(m.id)), [availableModelCatalog, selectedIds]);
+  const openRouterFreeModels = useMemo(() => availableModelCatalog.filter(isOpenRouterFreeModel), [availableModelCatalog]);
+  const openRouterPaidModels = useMemo(() => availableModelCatalog.filter(isOpenRouterPaidModel), [availableModelCatalog]);
+  const geminiModels = useMemo(() => availableModelCatalog.filter((m) => m.provider === 'gemini'), [availableModelCatalog]);
+  const liveFreeCount = useMemo(
+    () => liveOpenRouterModels?.filter((m) => m.isFree && normalizeModelId(m.id) !== "openrouter/free").length ?? 0,
+    [liveOpenRouterModels]
+  );
+  const hiddenOpenRouterCount = useMemo(() => {
+    if (!liveOpenRouterIdSet) return 0;
+    const totalOpenRouter = mergedCatalog.filter((m) => m.provider === 'openrouter').length;
+    const availableOpenRouter = availableModelCatalog.filter((m) => m.provider === 'openrouter').length;
+    return Math.max(0, totalOpenRouter - availableOpenRouter);
+  }, [availableModelCatalog, liveOpenRouterIdSet, mergedCatalog]);
   const anyLoading = loadingIds.length > 0;
   const [copiedAllIdx, setCopiedAllIdx] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -52,11 +109,31 @@ export default function Home() {
 
   const { session, loading } = useAuth();
   const router = useRouter();
-  const dashboardSidebarInputStyle: CSSProperties = {
+  const dashboardSidebarInputStyle: CSSProperties & Record<"--dashboard-sidebar-offset", string> = {
     '--dashboard-sidebar-offset': sidebarOpen ? 'calc(16rem + 1.5rem)' : 'calc(3.5rem + 1.5rem)',
   };
 
   const isUncensoredModel = (m: AiModel) => /uncensored/i.test(m.label) || /venice/i.test(m.model);
+
+  const syncOpenRouterModels = useCallback(async () => {
+    setLiveOpenRouterLoading(true);
+    try {
+      const data = await fetchOpenRouterLiveModels({ apiKey: keys.openrouter });
+      if (typeof data?.error === "string" && data.error) {
+        throw new Error(data.error);
+      }
+      const models = Array.isArray(data?.models) ? data.models : [];
+      setLiveOpenRouterModels(models);
+      setLiveSyncedAt(typeof data?.fetchedAt === 'number' ? data.fetchedAt : Date.now());
+      setLiveOpenRouterError(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLiveOpenRouterError(msg || 'Failed to fetch live models');
+      setLiveOpenRouterModels(null);
+    } finally {
+      setLiveOpenRouterLoading(false);
+    }
+  }, [keys.openrouter]);
 
   // Move this useMemo higher in the component, before any conditional returns
   const pairs = useMemo(() => {
@@ -79,6 +156,16 @@ export default function Home() {
       router.push('/?login=1');
     }
   }, [session, loading, router]);
+
+  useEffect(() => {
+    void syncOpenRouterModels();
+  }, [syncOpenRouterModels]);
+
+  useEffect(() => {
+    if (!liveOpenRouterIdSet) return;
+    const allowed = new Set(availableModelCatalog.map((m) => m.id));
+    setSelectedIds((prev) => prev.filter((id) => allowed.has(id)));
+  }, [availableModelCatalog, liveOpenRouterIdSet, setSelectedIds]);
   
   if (loading || !session) {
     return <div className="min-h-screen w-full bg-background relative text-foreground flex items-center justify-center">Loading...</div>;
@@ -108,7 +195,7 @@ export default function Home() {
   const toggle = (id: string) => {
     setSelectedIds(prev => {
       if (prev.includes(id)) return prev.filter(x => x !== id);
-      const valid = new Set(MODEL_CATALOG.map(m => m.id));
+      const valid = new Set(availableModelCatalog.map(m => m.id));
       const currentValidCount = prev.filter(x => valid.has(x)).length;
       if (currentValidCount >= 5) return prev;
       return [...prev, id];
@@ -206,24 +293,17 @@ export default function Home() {
 
   // group assistant messages by turn for simple compare view
   return (
-    <div className="dashboard-root min-h-screen w-full bg-background relative text-foreground">
-      <div
-        className="absolute inset-0 z-0"
-      />
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-      />
-
+    <div className="dashboard-root min-h-screen w-full relative text-foreground">
       <div className="relative z-10 px-3 lg:px-4 py-4 lg:py-6">
         <div className="flex gap-3 lg:gap-4">
           {/* Sidebar */}
           {/* Desktop sidebar */}
-          <aside className={`relative hidden lg:flex shrink-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)] rounded-lg border border-sidebar-border bg-sidebar p-3 flex-col transition-[width] duration-300 ${sidebarOpen ? 'w-64' : 'w-14'}`}>
+          <aside className={`surface-panel relative hidden lg:flex shrink-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)] rounded-lg border border-sidebar-border bg-sidebar/95 p-3 flex-col transition-[width] duration-300 ${sidebarOpen ? 'w-64' : 'w-14'}`}>
             {/* Collapse/Expand toggle */}
             <button
               aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute -right-3 top-5 z-10 h-6 w-6 rounded-full bg-sidebar-accent border border-sidebar-border flex items-center justify-center hover:bg-sidebar-accent-hover"
+              className="absolute -right-3 top-5 z-10 h-6 w-6 rounded-full bg-sidebar-accent border border-sidebar-border flex items-center justify-center shadow-sm hover:bg-accent"
             >
               {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
             </button>
@@ -241,7 +321,7 @@ export default function Home() {
                 className="absolute inset-0 bg-background/60 backdrop-blur-sm"
                 onClick={() => setFirstNoteDismissed(true)}
               />
-              <div className="relative mx-3 w-full max-w-md sm:max-w-lg rounded-2xl border border-border bg-card p-5 shadow-2xl">
+              <div className="surface-panel relative mx-3 w-full max-w-md sm:max-w-lg rounded-lg border bg-card p-5">
                 <div className="flex items-start gap-3 mb-2">
                   <h3 className="text-base font-semibold tracking-wide">Some models need API keys</h3>
                 </div>
@@ -255,13 +335,13 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
                   <button
                     onClick={() => window.dispatchEvent(new Event('open-settings'))}
-                    className="text-sm px-3 py-2 rounded bg-primary text-primary-foreground border border-primary-border hover:bg-primary/90"
+                    className="text-sm px-3 py-2 rounded-md bg-primary text-primary-foreground border border-primary/30 hover:bg-primary/90"
                   >
                     Get API key for free
                   </button>
                   <button
                     onClick={() => setFirstNoteDismissed(true)}
-                    className="text-sm px-3 py-2 rounded bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90"
+                    className="text-sm px-3 py-2 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90"
                   >
                     Dismiss
                   </button>
@@ -282,7 +362,7 @@ export default function Home() {
                     setThreads(prev => [t, ...prev]);
                     setActiveId(t.id);
                   }}
-                  className="mb-3 text-sm px-3 py-2 rounded-md bg-primary hover:bg-primary/90"
+                  className="mb-3 text-sm px-3 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                 >
                   + New Chat
                 </button>
@@ -310,7 +390,7 @@ export default function Home() {
                       ) : (
                         <div 
                           onClick={() => setActiveId(t.id)} 
-                          className={`w-full text-left px-2 py-2 rounded-md text-sm border flex items-center justify-between cursor-pointer ${t.id === activeId ? 'bg-secondary border-secondary-foreground' : 'bg-card border-border hover:bg-card/80'}`}
+                          className={`w-full text-left px-2 py-2 rounded-md text-sm border flex items-center justify-between cursor-pointer transition-colors ${t.id === activeId ? 'bg-primary/10 border-primary/40 text-foreground' : 'bg-card/70 border-border hover:bg-accent'}`}
                         >
                           <span className="truncate flex items-center gap-1">
                             {t.title || 'Untitled'}
@@ -337,8 +417,8 @@ export default function Home() {
                                     <><Pin size={14} className="mr-2" /> Pin</>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-zinc-700" />
-                                <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-red-400">
+                                <DropdownMenuSeparator className="bg-border" />
+                                <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-destructive focus:text-destructive">
                                   <Trash2 size={14} className="mr-2" /> Delete
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -360,7 +440,7 @@ export default function Home() {
                     setThreads(prev => [t, ...prev]);
                     setActiveId(t.id);
                   }}
-                  className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center mb-4 mx-auto shrink-0"
+                  className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center mb-4 mx-auto shrink-0"
                 >
                   <Plus size={14} />
                 </button>
@@ -377,7 +457,7 @@ export default function Home() {
                             title={t.title || 'Untitled'}
                             onClick={() => setActiveId(t.id)}
                             className={`h-6 w-6 aspect-square rounded-full flex items-center justify-center transition-colors focus-visible:outline-none mx-auto shrink-0 
-                              ${isActive ? 'bg-secondary ring-1 ring-secondary-foreground ring-offset-1 ring-offset-background' : 'bg-card hover:bg-card/80'}`}
+                              ${isActive ? 'bg-primary/15 ring-1 ring-primary ring-offset-1 ring-offset-background' : 'bg-card hover:bg-accent'}`}
                           >
                             <span className="text-[10px] font-semibold leading-none flex items-center gap-0.5">
                               {t.pinned && <Pin size={8} className="shrink-0 text-muted-foreground" />}
@@ -400,8 +480,8 @@ export default function Home() {
                               <><Pin size={14} className="mr-2" /> Pin</>
                             )}
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-zinc-700" />
-                          <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-red-400">
+                          <DropdownMenuSeparator className="bg-border" />
+                          <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-destructive focus:text-destructive">
                             <Trash2 size={14} className="mr-2" /> Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -416,14 +496,14 @@ export default function Home() {
           {/* Mobile sidebar drawer */}
           {mobileSidebarOpen && (
             <div className="lg:hidden fixed inset-0 z-40">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setMobileSidebarOpen(false)} />
-              <div className="absolute left-0 top-0 h-full w-72 bg-card border-r border-border p-3">
+              <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
+              <div className="surface-panel absolute left-0 top-0 h-full w-72 bg-card border-r border-border p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#e42a42]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                     <h2 className="text-sm font-semibold">PentAI</h2>
                   </div>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="text-xs px-2 py-1 rounded bg-card border border-border">Close</button>
+                  <button onClick={() => setMobileSidebarOpen(false)} className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Close</button>
                 </div>
                 <button
                   onClick={() => {
@@ -432,15 +512,15 @@ export default function Home() {
                     setActiveId(t.id);
                     setMobileSidebarOpen(false);
                   }}
-                  className="mb-3 text-sm px-3 py-2 w-full rounded-md bg-[#e42a42] hover:bg-[#cf243a]"
+                  className="mb-3 text-sm px-3 py-2 w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   + New Chat
                 </button>
-                <div className="text-xs uppercase tracking-wide opacity-60 mb-2">Chats</div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Chats</div>
                 <div className="h-[70vh] overflow-y-auto space-y-1 pr-1">
                   {threads.length === 0 && <div className="text-xs opacity-60">No chats yet</div>}
                   {threads.map(t => (
-                    <button key={t.id} onClick={() => { setActiveId(t.id); setMobileSidebarOpen(false); }} className={`w-full text-left px-2 py-2 rounded-md text-sm border ${t.id === activeId ? 'bg-card border-border' : 'bg-card border-border hover:bg-card/80'}`}>
+                    <button key={t.id} onClick={() => { setActiveId(t.id); setMobileSidebarOpen(false); }} className={`w-full text-left px-2 py-2 rounded-md text-sm border transition-colors ${t.id === activeId ? 'bg-primary/10 border-primary/40' : 'bg-card border-border hover:bg-accent'}`}>
                       {t.title || 'Untitled'}
                     </button>
                   ))}
@@ -453,7 +533,7 @@ export default function Home() {
             {/* Top bar */}
           <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden text-xs px-2 py-1 rounded bg-card border border-border">Menu</button>
+                <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Menu</button>
                 <h1 className="text-lg font-semibold">PentAI</h1>
               </div>
               <div className="flex items-center gap-2">
@@ -470,7 +550,7 @@ export default function Home() {
                 <button
                   key={m.id}
                   onClick={() => toggle(m.id)}
-                  className={`h-9 px-3 text-xs rounded-full text-foreground dark:text-white border flex items-center gap-2 bg-card dark:bg-white/5 hover:bg-accent dark:hover:bg-white/10 transition-colors ${
+                  className={`h-9 px-3 text-xs rounded-md text-foreground border flex items-center gap-2 bg-card hover:bg-accent transition-colors ${
                     m.good ? 'border-amber-300/40' : isFree ? 'border-emerald-300/40' : 'border-border'
                   }`}
                   title="Click to toggle"
@@ -482,20 +562,20 @@ export default function Home() {
                     </span>
                   )}
                   {isFree && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-400/15 text-emerald-200 ring-1 ring-emerald-300/30">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25">
                       <span className="h-2 w-2 rounded-full bg-emerald-300" />
                       <span className="hidden sm:inline">Free</span>
                     </span>
                   )}
                   {isUncensored && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-200 ring-1 ring-rose-300/30">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/25">
                       <span className="h-2 w-2 rounded-full bg-rose-200" />
                       <span className="hidden sm:inline">Uncensored</span>
                     </span>
                   )}
                   <span className="truncate max-w-[180px]">{m.label}</span>
-                  <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-orange-500/40">
-                    <span className="h-3 w-3 rounded-full bg-orange-200 translate-x-3.5" />
+                  <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-primary/30">
+                    <span className="h-3 w-3 rounded-full bg-primary translate-x-3.5" />
                   </span>
                 </button>
               );})}
@@ -515,23 +595,37 @@ export default function Home() {
 
             {modelsModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModelsModalOpen(false)} />
-                <div className="relative w-full max-w-2xl mx-auto rounded-2xl border border-border bg-card p-5 shadow-2xl">
+                <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setModelsModalOpen(false)} />
+                <div className="surface-panel relative w-full max-w-2xl mx-3 rounded-lg border bg-card p-5">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-base font-semibold tracking-wide">Select up to 5 models</h3>
-                    <button onClick={() => setModelsModalOpen(false)} className="text-xs px-2 py-1 rounded bg-white/10">Close</button>
+                    <button onClick={() => setModelsModalOpen(false)} className="text-xs px-2 py-1 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/90">Close</button>
                   </div>
                   <div className="text-xs text-muted-foreground mb-3">Selected: {selectedModels.length}/5</div>
+                  <div className="text-[11px] text-muted-foreground mb-3">
+                    {liveOpenRouterLoading
+                      ? 'Syncing OpenRouter live models...'
+                      : liveOpenRouterError
+                        ? `Live sync unavailable (${liveOpenRouterError}). Showing fallback catalog.`
+                        : `Live sync active${liveSyncedAt ? ` at ${new Date(liveSyncedAt).toLocaleTimeString()}` : ''}. ${liveFreeCount} live free model(s) found. ${hiddenOpenRouterCount} unavailable OpenRouter model(s) hidden.`}
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <button
                       onClick={() => setSelectedIds(openRouterFreeModels.slice(0, 5).map((m) => m.id))}
-                      className="text-xs px-2.5 py-1 rounded border border-emerald-300/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                      className="text-xs px-2.5 py-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
                     >
                       Use OpenRouter Free models (max 5)
                     </button>
                     <button
+                      onClick={() => void syncOpenRouterModels()}
+                      disabled={liveOpenRouterLoading}
+                      className="text-xs px-2.5 py-1 rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 disabled:opacity-60"
+                    >
+                      {liveOpenRouterLoading ? 'Refreshing...' : 'Refresh live models'}
+                    </button>
+                    <button
                       onClick={() => setSelectedIds([])}
-                      className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-card/80"
+                      className="text-xs px-2.5 py-1 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/90"
                     >
                       Clear selection
                     </button>
@@ -573,12 +667,12 @@ export default function Home() {
                                 <button
                                   key={m.id}
                                   onClick={() => !disabled && toggle(m.id)}
-                                  className={`h-9 px-3 text-xs rounded-full border transition-colors flex items-center justify-between gap-3 min-w-[260px] ${
+                                  className={`h-9 px-3 text-xs rounded-md border transition-colors flex items-center justify-between gap-3 min-w-[260px] ${
                                     selected
-                                      ? `${m.good ? 'border-amber-300/50' : free ? 'border-emerald-300/50' : paid ? 'border-sky-300/50' : 'border-white/20'} bg-white/10`
+                                      ? `${m.good ? 'border-amber-400/50' : free ? 'border-emerald-500/50' : paid ? 'border-sky-500/50' : 'border-primary/30'} bg-primary/10`
                                       : disabled
-                                        ? 'bg-white/5 text-zinc-500 border-white/10 cursor-not-allowed opacity-60'
-                                        : `${m.good ? 'border-amber-300/30' : free ? 'border-emerald-300/30' : paid ? 'border-sky-300/30' : 'border-white/10'} bg-white/5 hover:bg-white/10`
+                                        ? 'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-60'
+                                        : `${m.good ? 'border-amber-400/30' : free ? 'border-emerald-500/30' : paid ? 'border-sky-500/30' : 'border-border'} bg-card hover:bg-accent`
                                   }`}
                                   title={selected ? 'Click to unselect' : disabled ? 'Limit reached' : 'Click to select'}
                                 >
@@ -590,27 +684,27 @@ export default function Home() {
                                       </span>
                                     )}
                                     {free && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/30">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25">
                                         <span className="h-2 w-2 rounded-full bg-emerald-300" />
                                         <span className="hidden sm:inline">Free</span>
                                       </span>
                                     )}
                                     {paid && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-400/15 text-sky-200 ring-1 ring-sky-300/30">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 ring-1 ring-sky-500/25">
                                         <span className="h-2 w-2 rounded-full bg-sky-200" />
                                         <span className="hidden sm:inline">Paid</span>
                                       </span>
                                     )}
                                     {unc && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-200 ring-1 ring-rose-300/30">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/25">
                                         <span className="h-2 w-2 rounded-full bg-rose-200" />
                                         <span className="hidden sm:inline">Uncensored</span>
                                       </span>
                                     )}
                                     <span className="truncate max-w-[150px] sm:max-w-[200px]">{m.label}</span>
                                   </span>
-                                  <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${selected ? 'bg-orange-500/40' : 'bg-white/10'}`}>
-                                    <span className={`h-3 w-3 rounded-full transition-transform ${selected ? 'bg-orange-200 translate-x-3.5' : 'bg-white translate-x-0.5'}`} />
+                                  <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${selected ? 'bg-primary/30' : 'bg-muted'}`}>
+                                    <span className={`h-3 w-3 rounded-full transition-transform ${selected ? 'bg-primary translate-x-3.5' : 'bg-muted-foreground translate-x-0.5'}`} />
                                   </span>
                                 </button>
                               );
@@ -624,9 +718,9 @@ export default function Home() {
             )}
 
             {/* Messages area */}
-            <div className="rounded-lg border border-border bg-card dark:border-white/10 dark:bg-white/5 px-2 pt-5 overflow-x-auto flex-1 overflow-y-auto pb-28 text-foreground">
+            <div className="surface-panel rounded-lg border bg-card px-3 pt-5 overflow-x-auto flex-1 overflow-y-auto pb-28 text-foreground">
               {selectedModels.length === 0 ? (
-                <div className="p-4 text-zinc-400">Select up to 5 models to compare.</div>
+                <div className="p-4 text-muted-foreground">Select up to 5 models to compare.</div>
               ) : (
                 <div className="min-w-full space-y-3">
                   {/* Header row: model labels */}
@@ -637,8 +731,8 @@ export default function Home() {
                     {selectedModels.map((m) => {
                       const isFree = isModelFree(m);
                       return (
-                      <div key={m.id} className={`px-1 py-5 min-h-[60px] border-b flex items-center justify-between overflow-visible ${m.good ? 'border-amber-300/40' : 'border-white/10'}`}>
-                        <div className={`text-[13px] leading-normal font-medium pr-2 inline-flex items-center gap-1.5 min-w-0 ${m.good || isFree ? 'opacity-100 text-white' : 'opacity-90'}`}>
+                      <div key={m.id} className={`px-1 py-5 min-h-[60px] border-b flex items-center justify-between overflow-visible ${m.good ? 'border-amber-400/40' : 'border-border'}`}>
+                        <div className={`text-[13px] leading-normal font-medium pr-2 inline-flex items-center gap-1.5 min-w-0 ${m.good || isFree ? 'opacity-100 text-foreground' : 'opacity-90'}`}>
                           {m.good && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0 rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/30 text-[11px] h-6 self-center">
                               <Star size={11} />
@@ -646,14 +740,14 @@ export default function Home() {
                             </span>
                           )}
                           {isFree && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0 rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/30 text-[11px] h-6 self-center">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25 text-[11px] h-6 self-center">
                               <span className="h-2 w-2 rounded-full bg-emerald-300" />
                               <span className="hidden sm:inline">Free</span>
                             </span>
                           )}
                           <span className="truncate">{m.label}</span>
                         </div>
-                        {loadingIds.includes(m.id) && <span className="text-[11px] text-[#e42a42]">Thinking…</span>}
+                        {loadingIds.includes(m.id) && <span className="text-[11px] text-primary">Thinking...</span>}
                       </div>
                     );})}
                   </div>
@@ -662,7 +756,7 @@ export default function Home() {
                   {pairs.map((row, i) => (
                     <div key={i} className="space-y-2">
                       {/* Optional: show the user prompt spanning all columns */}
-                      <div className="text-sm text-zinc-300 flex items-center justify-between gap-2">
+                      <div className="text-sm text-muted-foreground flex items-center justify-between gap-2">
                         <div>
                           <span className="opacity-60">You:</span> {row.user.content}
                         </div>
@@ -680,8 +774,8 @@ export default function Home() {
                           }}
                           className={`text-[11px] px-2.5 py-1 rounded-md border shadow-sm transition-all ${
                             copiedAllIdx === i
-                              ? 'bg-emerald-500/20 border-emerald-300/40 text-emerald-100 scale-[1.02]'
-                              : 'bg-white/10 border-white/15 hover:bg-white/15'
+                              ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300 scale-[1.02]'
+                              : 'bg-secondary border-border text-secondary-foreground hover:bg-secondary/80'
                           }`}
                           title="Copy all model responses for this prompt"
                         >
@@ -703,7 +797,7 @@ export default function Home() {
                           const ans = row.answers.find((a) => a.modelId === m.id);
                           return (
                             <div key={m.id} className="h-full">
-                              <div className={`group relative rounded-md p-3 h-full min-h-[160px] flex overflow-hidden ring-1 ${m.good ? 'bg-gradient-to-b from-amber-50/10 to-card ring-amber-300/30 dark:from-amber-400/10 dark:to-white/5' : isFree ? 'bg-gradient-to-b from-emerald-50/10 to-card ring-emerald-300/30 dark:from-emerald-400/10 dark:to-white/5' : 'bg-card dark:bg-white/5 dark:ring-white/5 ring-border'}`}>
+                              <div className={`group relative rounded-md p-3 h-full min-h-[160px] flex overflow-hidden ring-1 ${m.good ? 'bg-gradient-to-b from-amber-500/10 to-card ring-amber-400/30' : isFree ? 'bg-gradient-to-b from-emerald-500/10 to-card ring-emerald-500/30' : 'bg-card ring-border'}`}>
                                 {ans && (
                                   <button
                                     onClick={() => {
@@ -714,8 +808,8 @@ export default function Home() {
                                     }}
                                     className={`absolute top-2 right-2 z-10 text-[11px] px-2 py-1 rounded border whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all ${
                                       copiedKey === `${i}:${m.id}`
-                                        ? 'bg-emerald-500/20 border-emerald-300/40 text-emerald-100 scale-[1.02]'
-                                        : 'bg-white/10 border-white/10 hover:bg-white/15'
+                                        ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300 scale-[1.02]'
+                                        : 'bg-secondary border-border text-secondary-foreground hover:bg-secondary/80'
                                     }`}
                                     title={`Copy ${m.label} response`}
                                   >
@@ -743,7 +837,7 @@ export default function Home() {
                                         <div className="mt-2">
                                           <button
                                             onClick={() => window.dispatchEvent(new Event('open-settings'))}
-                                            className="text-xs px-2.5 py-1 rounded bg-[#e42a42] text-white border border-white/10 hover:bg-[#cf243a]"
+                                            className="text-xs px-2.5 py-1 rounded-md bg-primary text-primary-foreground border border-primary/30 hover:bg-primary/90"
                                           >
                                             Add keys
                                           </button>
@@ -752,10 +846,10 @@ export default function Home() {
                                     </>
                                   ) : loadingIds.includes(m.id) ? (
                                             <div className="w-full self-stretch animate-pulse space-y-2">
-                                                <div className="h-2.5 w-1/3 rounded bg-[#e42a42]/30" />
-                                                <div className="h-2 rounded bg-card" />
-                                                <div className="h-2 rounded bg-card w-5/6" />
-                                                <div className="h-2 rounded bg-card w-2/3" />
+                                                <div className="h-2.5 w-1/3 rounded bg-primary/30" />
+                                                <div className="h-2 rounded bg-muted" />
+                                                <div className="h-2 rounded bg-muted w-5/6" />
+                                                <div className="h-2 rounded bg-muted w-2/3" />
                                               </div>
                                   ) : (
                                     <span className="opacity-40">No reply yet</span>
@@ -773,7 +867,7 @@ export default function Home() {
             </div>
 
             {/* Fixed bottom input line */}
-            <div className="fixed bottom-0 left-0 right-0 z-20 pt-2 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t dark:from-black/70 from-foreground/10 to-transparent">
+            <div className="fixed bottom-0 left-0 right-0 z-20 pt-2 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t from-background/95 via-background/75 to-transparent">
               <div
                 className="w-full px-3 lg:px-4 lg:pl-[var(--dashboard-sidebar-offset)]"
                 style={dashboardSidebarInputStyle}

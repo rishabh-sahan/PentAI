@@ -1,12 +1,21 @@
 "use client"
 
-import React, { useState } from "react"
-import { Header } from "./header"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { useAuth } from "@/context/AuthContext"
-import { LoginModal } from "@/components/auth/LoginModal"
+import Image from "next/image"
+import { ArrowRight, Check, KeyRound, Layers3, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
+
+import { LoginModal } from "@/components/auth/LoginModal"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/context/AuthContext"
+import { Header } from "./header"
+
+const stats = [
+  { label: "models at once", value: "5" },
+  { label: "key storage", value: "local" },
+  { label: "workspace", value: "BYOK" },
+]
+
 export function HeroSection() {
   const { session } = useAuth()
   const router = useRouter()
@@ -21,460 +30,106 @@ export function HeroSection() {
   }
 
   return (
-    <section
-      className="flex flex-col items-center text-center relative mx-auto rounded-2xl overflow-hidden my-4 py-0 px-3
-         w-full h-[360px] md:w-[1220px] md:h-[520px] lg:h-[680px] md:px-0"
-    >
-      {/* SVG Background */}
-      <div className="absolute inset-0 z-0">
-        <svg
-          width="100%"
-          height="100%"
-          viewBox="0 0 1220 810"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <g clipPath="url(#clip0_186_1134)">
-            <mask
-              id="mask0_186_1134"
-              style={{ maskType: "alpha" }}
-              maskUnits="userSpaceOnUse"
-              x="10"
-              y="-1"
-              width="1200"
-              height="812"
-            >
-              <rect x="10" y="-0.84668" width="1200" height="811.693" fill="url(#paint0_linear_186_1134)" />
-            </mask>
-            <g mask="url(#mask0_186_1134)">
-              {/* Grid Rectangles */}
-              {[...Array(35)].map((_, i) => (
-                <React.Fragment key={`row1-${i}`}>
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="9.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="45.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="81.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="117.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="153.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="189.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="225.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="261.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="297.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="333.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="369.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="405.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="441.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="477.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="513.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="549.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="585.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="621.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="657.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="693.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="729.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                  <rect
-                    x={-20.0891 + i * 36}
-                    y="765.2"
-                    width="35.6"
-                    height="35.6"
-                    stroke="hsl(var(--foreground))"
-                    strokeOpacity="0.11"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                  />
-                </React.Fragment>
-              ))}
-              {/* Specific Rectangles with fill */}
-              <rect x="699.711" y="81" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.08" />
-              <rect x="195.711" y="153" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="1023.71" y="153" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="123.711" y="225" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="1095.71" y="225" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="951.711" y="297" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="231.711" y="333" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.07" />
-              <rect x="303.711" y="405" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.07" />
-              <rect x="87.7109" y="405" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="519.711" y="405" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.08" />
-              <rect x="771.711" y="405" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.09" />
-              <rect x="591.711" y="477" width="36" height="36" fill="hsl(var(--foreground))" fillOpacity="0.07" />
-            </g>
-            <g filter="url(#filter0_f_186_1134)">
-              <path
-                d="M1447.45 -87.0203V-149.03H1770V1248.85H466.158V894.269C1008.11 894.269 1447.45 454.931 1447.45 -87.0203Z"
-                fill="url(#paint1_linear_186_1134)"
-              />
-            </g>
-            <g filter="url(#filter1_f_186_1134)">
-              <path
-                d="M1383.45 -151.02V-213.03H1706V1184.85H402.158V830.269C944.109 830.269 1383.45 390.931 1383.45 -151.02Z"
-                fill="url(#paint2_linear_186_1134)"
-                fillOpacity="0.69"
-              />
-            </g>
-
-            <g style={{ mixBlendMode: "lighten" }} filter="url(#filter2_f_186_1134)">
-              <path
-                d="M1567.45 -231.02V-293.03H1890V1104.85H586.158V750.269C1128.11 750.269 1567.45 310.931 1567.45 -231.02Z"
-                fill="url(#paint3_linear_186_1134)"
-              />
-            </g>
-
-            <g style={{ mixBlendMode: "overlay" }} filter="url(#filter3_f_186_1134)">
-              <path
-                d="M65.625 750.269H284.007C860.205 750.269 1327.31 283.168 1327.31 -293.03H1650V1104.85H65.625V750.269Z"
-                fill="url(#paint4_radial_186_1134)"
-                fillOpacity="0.64"
-              />
-            </g>
-          </g>
-
-          <rect
-            x="0.5"
-            y="0.5"
-            width="1219"
-            height="809"
-            rx="15.5"
-            stroke="hsl(var(--foreground))"
-            strokeOpacity="0.06"
-          />
-
-          <defs>
-            <filter
-              id="filter0_f_186_1134"
-              x="147.369"
-              y="-467.818"
-              width="1941.42"
-              height="2035.46"
-              filterUnits="userSpaceOnUse"
-              colorInterpolationFilters="sRGB"
-            >
-              <feFlood floodOpacity="0" result="BackgroundImageFix" />
-              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
-              <feGaussianBlur stdDeviation="159.394" result="effect1_foregroundBlur_186_1134" />
-            </filter>
-            <filter
-              id="filter1_f_186_1134"
-              x="-554.207"
-              y="-1169.39"
-              width="3216.57"
-              height="3310.61"
-              filterUnits="userSpaceOnUse"
-              colorInterpolationFilters="sRGB"
-            >
-              <feFlood floodOpacity="0" result="BackgroundImageFix" />
-              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
-              <feGaussianBlur stdDeviation="478.182" result="effect1_foregroundBlur_186_1134" />
-            </filter>
-            <filter
-              id="filter2_f_186_1134"
-              x="426.762"
-              y="-452.424"
-              width="1622.63"
-              height="1716.67"
-              filterUnits="userSpaceOnUse"
-              colorInterpolationFilters="sRGB"
-            >
-              <feFlood floodOpacity="0" result="BackgroundImageFix" />
-              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
-              <feGaussianBlur stdDeviation="79.6969" result="effect1_foregroundBlur_186_1134" />
-            </filter>
-            <filter
-              id="filter3_f_186_1134"
-              x="-253.163"
-              y="-611.818"
-              width="2221.95"
-              height="2035.46"
-              filterUnits="userSpaceOnUse"
-              colorInterpolationFilters="sRGB"
-            >
-              <feFlood floodOpacity="0" result="BackgroundImageFix" />
-              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
-              <feGaussianBlur stdDeviation="159.394" result="effect1_foregroundBlur_186_1134" />
-            </filter>
-            <linearGradient
-              id="paint0_linear_186_1134"
-              x1="35.0676"
-              y1="23.6807"
-              x2="903.8"
-              y2="632.086"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="hsl(var(--foreground))" stopOpacity="0" />
-              <stop offset="1" stopColor="hsl(var(--muted-foreground))" />
-            </linearGradient>
-            <linearGradient
-              id="paint1_linear_186_1134"
-              x1="1118.08"
-              y1="-149.03"
-              x2="1118.08"
-              y2="1248.85"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="hsl(var(--foreground))" />
-              <stop offset="0.578125" stopColor="hsl(var(--primary-light))" />
-              <stop offset="1" stopColor="hsl(var(--primary))" />
-            </linearGradient>
-            <linearGradient
-              id="paint2_linear_186_1134"
-              x1="1054.08"
-              y1="-213.03"
-              x2="1054.08"
-              y2="1184.85"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="hsl(var(--foreground))" />
-              <stop offset="0.578125" stopColor="hsl(var(--primary-light))" />
-              <stop offset="1" stopColor="hsl(var(--primary))" />
-            </linearGradient>
-            <linearGradient
-              id="paint3_linear_186_1134"
-              x1="1238.08"
-              y1="-293.03"
-              x2="1238.08"
-              y2="1104.85"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="hsl(var(--foreground))" />
-              <stop offset="0.578125" stopColor="hsl(var(--primary-light))" />
-              <stop offset="1" stopColor="hsl(var(--primary))" />
-            </linearGradient>
-            <radialGradient
-              id="paint4_radial_186_1134"
-              cx="0"
-              cy="0"
-              r="1"
-              gradientUnits="userSpaceOnUse"
-              gradientTransform="translate(989.13 557.24) rotate(47.9516) scale(466.313 471.424)"
-            >
-              <stop stopColor="hsl(var(--foreground))" />
-              <stop offset="0.157789" stopColor="hsl(var(--primary-light))" />
-              <stop offset="1" stopColor="hsl(var(--primary))" />
-            </radialGradient>
-            <clipPath id="clip0_186_1134">
-              <rect width="1220" height="810" rx="16" fill="hsl(var(--foreground))" />
-            </clipPath>
-          </defs>
-        </svg>
+    <section className="relative min-h-[760px] overflow-hidden border-b border-border bg-background">
+      <div className="absolute inset-0">
+        <Image
+          src="/images/product-ui.jpeg"
+          alt="PentAI multi-model dashboard"
+          fill
+          priority
+          className="object-cover object-center opacity-20 dark:opacity-24"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--background)_0%,color-mix(in_oklab,var(--background)_78%,transparent)_38%,var(--background)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--background)_0%,color-mix(in_oklab,var(--background)_70%,transparent)_45%,var(--background)_100%)]" />
       </div>
-      {/* Header positioned at top of hero container */}
-      <div className="absolute top-0 left-0 right-0 z-20">
+
+      <div className="relative z-20">
         <Header />
       </div>
 
-      <div className="relative z-10 space-y-3 md:space-y-4 lg:space-y-5 mb-4 md:mb-5 lg:mb-6 max-w-md md:max-w-[620px] lg:max-w-[760px] mt-10 md:mt-20 lg:mt-28 px-3">
-        <h1 className="text-foreground text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight">
-          Premium AI Workspace, Curated for Builders
-        </h1>
-        <p className="text-muted-foreground text-base md:text-lg lg:text-xl font-medium leading-relaxed mx-auto">
-          PentAI brings the world’s best AI models into one refined experience. A luxurious, distraction‑free interface with powerful tools for code, content, and research.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:gap-3">
-          <Button onClick={handleGetStarted} className="w-full sm:w-auto px-7 py-6 text-base md:text-lg font-medium bg-primary text-primary-foreground hover:opacity-95 shadow-lg shadow-primary/20">
-            Get Started
-          </Button>
-          <Link href="#features" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto px-7 py-6 text-base md:text-lg font-medium border-border hover:bg-secondary/50">
-              Explore Models
+      <div className="relative z-10 mx-auto flex max-w-[1320px] flex-col px-5 pb-12 pt-12 md:pb-16 md:pt-20">
+        <div className="max-w-4xl">
+          <div className="inline-flex items-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
+            <Sparkles className="h-4 w-4" />
+            Multi-model AI workspace for builders
+          </div>
+          <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight tracking-tight text-foreground md:text-6xl lg:text-7xl">
+            Compare the best AI answers in one focused workspace.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+            PentAI lets you chat with Gemini and OpenRouter models side by side, keep threaded work organized, and use your own API keys without turning your browser into a tab maze.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button onClick={handleGetStarted} size="lg" className="h-12 px-6 text-base">
+              Open workspace
+              <ArrowRight className="h-4 w-4" />
             </Button>
-          </Link>
+            <Button asChild variant="outline" size="lg" className="h-12 px-6 text-base">
+              <a href="#compare">See comparison flow</a>
+            </Button>
+          </div>
+
+          <div className="mt-7 flex flex-wrap gap-3 text-sm text-muted-foreground">
+            {["Parallel replies", "Pinned chats", "Live model sync", "Light and dark mode"].map((item) => (
+              <span key={item} className="inline-flex items-center gap-2 rounded-md border border-border bg-card/70 px-3 py-2">
+                <Check className="h-4 w-4 text-primary" />
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center justify-center gap-4 opacity-90">
-          <div className="text-sm md:text-base text-muted-foreground">No clutter</div>
-          <div className="h-1 w-1 rounded-full bg-muted-foreground/50" />
-          <div className="text-sm md:text-base text-muted-foreground">Privacy‑first</div>
-          <div className="h-1 w-1 rounded-full bg-muted-foreground/50" />
-          <div className="text-sm md:text-base text-muted-foreground">Beautifully fast</div>
+
+        <div className="mt-12 grid gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
+          <div className="overflow-hidden rounded-lg border border-border bg-card/80 shadow-2xl shadow-foreground/10 backdrop-blur">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Layers3 className="h-4 w-4 text-primary" />
+                Live comparison
+              </div>
+              <div className="text-xs text-muted-foreground">5 selected models</div>
+            </div>
+            <div className="grid min-h-[300px] gap-3 p-4 md:grid-cols-3">
+              {["Gemini 2.5 Flash", "Llama 3.3 70B", "Qwen 2.5"].map((model, index) => (
+                <div key={model} className="rounded-md border border-border bg-background/70 p-4">
+                  <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                    <span className="truncate text-sm font-semibold">{model}</span>
+                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-300">
+                      {index === 0 ? "Fast" : "Free"}
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    <div className="h-2.5 w-2/3 rounded bg-primary/25" />
+                    <div className="h-2 rounded bg-muted" />
+                    <div className="h-2 w-5/6 rounded bg-muted" />
+                    <div className="h-2 w-3/4 rounded bg-muted" />
+                  </div>
+                  <p className="mt-5 text-sm leading-6 text-muted-foreground">
+                    Side-by-side output makes strengths, tone, and tradeoffs easy to scan.
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            {stats.map((stat) => (
+              <div key={stat.label} className="rounded-lg border border-border bg-card/80 p-5 shadow-sm backdrop-blur">
+                <div className="text-3xl font-semibold text-foreground">{stat.value}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+            <div className="rounded-lg border border-primary/25 bg-primary/10 p-5 text-primary">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <KeyRound className="h-4 w-4" />
+                Your keys stay in your browser storage
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </section>
   )

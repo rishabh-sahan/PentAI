@@ -1,91 +1,34 @@
 "use client"
 
-import { Twitter, Github, Linkedin } from "lucide-react"
+import { Github } from "lucide-react"
+
+const links = [
+  { label: "Compare", href: "#compare" },
+  { label: "Workflow", href: "#workflow" },
+  { label: "Security", href: "#security" },
+  { label: "Use cases", href: "#use-cases" },
+  { label: "FAQ", href: "#faq-section" },
+]
 
 export function FooterSection() {
   return (
-    <footer className="w-full max-w-[1320px] mx-auto px-5 flex flex-col md:flex-row justify-between items-start gap-8 md:gap-0 py-10 md:py-[70px]">
-      {/* Left Section: Logo, Description, Social Links */}
-      <div className="flex flex-col justify-start items-start gap-8 p-4 md:p-8">
-        <div className="flex gap-3 items-stretch justify-center">
-          <div className="text-center text-foreground text-xl font-semibold leading-4">PentAI</div>
-        </div>
-        <p className="text-foreground/90 text-sm font-medium leading-[18px] text-left">Open-source AI workspace</p>
-        <div className="flex justify-start items-start gap-3">
-          <a href="#" aria-label="Twitter" className="w-4 h-4 flex items-center justify-center">
-            <Twitter className="w-full h-full text-muted-foreground" />
-          </a>
-          <a href="#" aria-label="GitHub" className="w-4 h-4 flex items-center justify-center">
-            <Github className="w-full h-full text-muted-foreground" />
-          </a>
-          <a href="#" aria-label="LinkedIn" className="w-4 h-4 flex items-center justify-center">
-            <Linkedin className="w-full h-full text-muted-foreground" />
-          </a>
-        </div>
+    <footer className="mx-auto flex w-full max-w-[1320px] flex-col gap-6 border-t border-border px-5 py-8 md:flex-row md:items-center md:justify-between">
+      <div>
+        <div className="text-xl font-semibold tracking-tight">PentAI</div>
+        <p className="mt-1 text-sm text-muted-foreground">Open-source multi-model AI workspace.</p>
       </div>
-      {/* Right Section: Product, Company, Resources */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 p-4 md:p-8 w-full md:w-auto">
-        <div className="flex flex-col justify-start items-start gap-3">
-          <h3 className="text-muted-foreground text-sm font-medium leading-5">Product</h3>
-          <div className="flex flex-col justify-end items-start gap-2">
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Features
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Pricing
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Integrations
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Real-time Previews
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Multi-Agent Coding
-            </a>
-          </div>
-        </div>
-        <div className="flex flex-col justify-start items-start gap-3">
-          <h3 className="text-muted-foreground text-sm font-medium leading-5">Company</h3>
-          <div className="flex flex-col justify-center items-start gap-2">
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              About us
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Our team
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Careers
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Brand
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Contact
-            </a>
-          </div>
-        </div>
-        <div className="flex flex-col justify-start items-start gap-3">
-          <h3 className="text-muted-foreground text-sm font-medium leading-5">Resources</h3>
-          <div className="flex flex-col justify-center items-start gap-2">
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Terms of use
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              API Reference
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Documentation
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Community
-            </a>
-            <a href="#" className="text-foreground text-sm font-normal leading-5 hover:underline">
-              Support
-            </a>
-          </div>
-        </div>
-      </div>
+
+      <nav className="flex flex-wrap gap-3">
+        {links.map((link) => (
+          <a key={link.href} href={link.href} className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+            {link.label}
+          </a>
+        ))}
+      </nav>
+
+      <a href="#" aria-label="GitHub" className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+        <Github className="h-4 w-4" />
+      </a>
     </footer>
   )
 }

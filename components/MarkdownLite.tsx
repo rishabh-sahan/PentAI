@@ -16,9 +16,9 @@ export default function MarkdownLite({ text }: Props) {
   const blocks = splitFencedCodeBlocks(text);
 
   return (
-    <div className="text-zinc-200 leading-relaxed whitespace-pre-wrap">
+    <div className="text-foreground leading-relaxed whitespace-pre-wrap">
       {blocks.map((b, i) => b.type === "code" ? (
-        <pre key={i} className="my-2 rounded bg-black/40 border border-white/10 p-2 overflow-x-auto text-xs">
+        <pre key={i} className="my-2 rounded-md bg-muted border border-border p-3 overflow-x-auto text-xs text-foreground">
           <code>{b.content}</code>
         </pre>
       ) : (
@@ -54,7 +54,7 @@ function renderInline(input: string): React.ReactNode[] {
     if (/^`[^`]+`$/.test(seg)) {
       const content = seg.slice(1, -1);
       out.push(
-        <code key={idx} className="rounded bg-black/40 px-1 py-0.5 border border-white/10 text-[0.85em]">
+        <code key={idx} className="rounded bg-muted px-1 py-0.5 border border-border text-[0.85em]">
           {content}
         </code>
       );
@@ -62,14 +62,14 @@ function renderInline(input: string): React.ReactNode[] {
       // Bold then italics on the remaining text. Keep it simple and safe.
       // Replace **bold**
       const withBold = splitAndWrap(seg, /\*\*([^*]+)\*\*/g, (m, i) => (
-        <strong key={`b-${idx}-${i}`} className="font-semibold text-zinc-100">{m}</strong>
+        <strong key={`b-${idx}-${i}`} className="font-semibold text-foreground">{m}</strong>
       ));
       // For each piece, also apply _italic_ or *italic*
       const withItalics: React.ReactNode[] = [];
       withBold.forEach((piece, i) => {
         if (typeof piece !== "string") { withItalics.push(piece); return; }
         const italics = splitAndWrap(piece, /(?:\*([^*]+)\*|_([^_]+)_)/g, (m2, ii) => (
-          <em key={`i-${idx}-${i}-${ii}`} className="italic text-zinc-100/90">{m2}</em>
+          <em key={`i-${idx}-${i}-${ii}`} className="italic text-foreground/90">{m2}</em>
         ));
         // After italics, highlight standalone word FREE in emerald
         italics.forEach((part, j) => {
@@ -77,7 +77,7 @@ function renderInline(input: string): React.ReactNode[] {
           const chunks = part.split(/(\bFREE\b)/gi);
           chunks.forEach((ch, k) => {
             if (/^\bFREE\b$/i.test(ch)) {
-              withItalics.push(<span key={`free-${idx}-${i}-${j}-${k}`} className="text-emerald-300 font-semibold">FREE</span>);
+              withItalics.push(<span key={`free-${idx}-${i}-${j}-${k}`} className="text-emerald-600 dark:text-emerald-300 font-semibold">FREE</span>);
             } else if (ch) {
               withItalics.push(<React.Fragment key={`t-${idx}-${i}-${j}-${k}`}>{ch}</React.Fragment>);
             }

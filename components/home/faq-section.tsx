@@ -6,24 +6,24 @@ import { ChevronDown } from "lucide-react"
 
 const faqData = [
   {
-    question: "Is it open source?",
+    question: "What is PentAI built for?",
     answer:
-      "It's completely open source and fully self-hostable. We believe in transparency and community-driven development.",
+      "PentAI is built for comparing multiple AI model responses in one dashboard instead of jumping between separate tools.",
   },
   {
-    question: "How is PentAI different from individual subscriptions?",
+    question: "Which providers does it support?",
     answer:
-      "Instead of paying separately for ChatGPT, Claude, Gemini, Grok, Perplexity, or DeepSeek, PentAI gives you all of them in one chat window — plus features like Prompt Enhancer & Custom Projects.",
+      "The current project supports Gemini and OpenRouter-powered models, including free and paid OpenRouter model groups.",
   },
   {
-    question: "Can I choose which AIs to use?",
+    question: "Where are my API keys stored?",
     answer:
-      "Yes! Turn models on/off anytime and bring them back later without losing chat history.",
+      "Keys are stored locally in your browser localStorage and sent with your requests only when those providers are used.",
   },
   {
-    question: "Do I get unlimited messages?",
+    question: "Can I keep multiple chats organized?",
     answer:
-      "You're flexible! Use as many messages as you want with the AI models you choose. No limits on your creativity.",
+      "Yes. The dashboard includes persistent chat threads, active chat state, rename, pin, delete, and selected model persistence.",
   },
 ]
 
@@ -41,14 +41,14 @@ const FAQItem = ({ question, answer, isOpen, onToggle }: FAQItemProps) => {
   }
   return (
     <div
-      className={`w-full bg-[rgba(231,236,235,0.08)] shadow-[0px_2px_4px_rgba(0,0,0,0.16)] overflow-hidden rounded-[10px] outline outline-1 outline-border outline-offset-[-1px] transition-all duration-500 ease-out cursor-pointer`}
+      className="w-full overflow-hidden rounded-lg border border-border bg-card/70 shadow-sm transition-all duration-500 ease-out cursor-pointer hover:bg-accent/40"
       onClick={handleClick}
     >
       <div className="w-full px-5 py-[18px] pr-4 flex justify-between items-center gap-5 text-left transition-all duration-300 ease-out">
         <div className="flex-1 text-foreground text-base font-medium leading-6 break-words">{question}</div>
         <div className="flex justify-center items-center">
           <ChevronDown
-            className={`w-6 h-6 text-muted-foreground-dark transition-all duration-500 ease-out ${isOpen ? "rotate-180 scale-110" : "rotate-0 scale-100"}`}
+            className={`w-6 h-6 text-muted-foreground transition-all duration-500 ease-out ${isOpen ? "rotate-180 scale-110" : "rotate-0 scale-100"}`}
           />
         </div>
       </div>
@@ -81,15 +81,14 @@ export function FAQSection() {
     setOpenItems(newOpenItems)
   }
   return (
-    <section className="w-full pt-[66px] pb-20 md:pb-40 px-5 relative flex flex-col justify-center items-center">
-      <div className="w-[300px] h-[500px] absolute top-[150px] left-1/2 -translate-x-1/2 origin-top-left rotate-[-33.39deg] bg-primary/10 blur-[100px] z-0" />
+    <section id="faq-section" className="w-full px-5 py-16 md:py-24 relative flex flex-col justify-center items-center">
       <div className="self-stretch pt-8 pb-8 md:pt-14 md:pb-14 flex flex-col justify-center items-center gap-2 relative z-10">
         <div className="flex flex-col justify-start items-center gap-4">
           <h2 className="w-full max-w-[435px] text-center text-foreground text-4xl font-semibold leading-10 break-words">
             Frequently Asked Questions
           </h2>
           <p className="self-stretch text-center text-muted-foreground text-sm font-medium leading-[18.20px] break-words">
-            Everything you need to know about Pointer and how it can transform your development workflow
+            Practical details about the workspace, providers, and local settings.
           </p>
         </div>
       </div>

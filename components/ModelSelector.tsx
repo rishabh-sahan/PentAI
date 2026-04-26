@@ -27,7 +27,7 @@ export default function ModelSelector({
             key={m.id}
             onClick={() => onToggle(m.id)}
             disabled={!selected && disabled}
-            className={`px-3 py-1.5 rounded-md border text-sm tracking-tight ${selected ? 'bg-[#e42a42] border-[#d0253b] text-white shadow-[0_0_0_1px_rgba(228,42,66,0.4)_inset]' : 'bg-white/10 border-white/15 text-white'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/20'}`}
+            className={`px-3 py-1.5 rounded-md border text-sm tracking-tight transition-colors ${selected ? 'bg-primary border-primary/40 text-primary-foreground shadow-sm' : 'bg-card border-border text-foreground'} ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'}`}
             title={disabled ? `Max ${max} models at once` : ''}
           >
             {selected ? '✓ ' : ''}{m.label}
