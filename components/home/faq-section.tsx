@@ -8,7 +8,7 @@ const faqData = [
   {
     question: "Is it open source?",
     answer:
-      "It's completely open source! You can self-host it, contribute to the code, or even fork it to create your own version. We believe in transparency and community-driven development.",
+      "It's completely open source and fully self-hostable. We believe in transparency and community-driven development.",
   },
   {
     question: "How is PentAI different from individual subscriptions?",

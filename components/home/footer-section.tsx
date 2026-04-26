@@ -10,7 +10,7 @@ export function FooterSection() {
         <div className="flex gap-3 items-stretch justify-center">
           <div className="text-center text-foreground text-xl font-semibold leading-4">PentAI</div>
         </div>
-        <p className="text-foreground/90 text-sm font-medium leading-[18px] text-left">Made By Nirma J Mali</p>
+        <p className="text-foreground/90 text-sm font-medium leading-[18px] text-left">Open-source AI workspace</p>
         <div className="flex justify-start items-start gap-3">
           <a href="#" aria-label="Twitter" className="w-4 h-4 flex items-center justify-center">
             <Twitter className="w-full h-full text-muted-foreground" />

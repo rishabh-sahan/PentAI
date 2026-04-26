@@ -5,11 +5,6 @@
     "node": "22.x"
   },
   "private": true,
-  "author": {
-    "name": "Nirma J Mali",
-    "email": "nirmamali8618@gmail.com",
-    "url": "https://github.com/NirmaMali"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

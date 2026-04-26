@@ -162,3 +162,21 @@ export const MODEL_CATALOG: AiModel[] = [
   
   // Anthropic entries removed per request
 ];
+
+export function isOpenRouterModel(model: AiModel): boolean {
+  return model.provider === 'openrouter';
+}
+
+export function isOpenRouterFreeModel(model: AiModel): boolean {
+  if (!isOpenRouterModel(model)) return false;
+  return model.free === true || /:free$/i.test(model.model);
+}
+
+export function isOpenRouterPaidModel(model: AiModel): boolean {
+  return isOpenRouterModel(model) && !isOpenRouterFreeModel(model);
+}
+
+export function isModelFree(model: AiModel): boolean {
+  if (model.provider === 'openrouter') return isOpenRouterFreeModel(model);
+  return model.free === true;
+}

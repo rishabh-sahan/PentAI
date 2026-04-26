@@ -1,16 +1,19 @@
 "use client";
-import { useMemo, useState, useEffect } from "react";
-import Image from "next/image";
-import { ChevronLeft, ChevronRight, Plus, Github, Star, Check, EllipsisVertical, Pin, PinOff, Trash2, Edit, Moon, Sun } from "lucide-react";
+import { useMemo, useState, useEffect, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight, Plus, Star, Check, EllipsisVertical, Pin, PinOff, Trash2, Edit } from "lucide-react";
 import Settings from "@/components/Settings";
 import { useLocalStorage } from "@/lib/useLocalStorage";
-import { MODEL_CATALOG } from "@/lib/models";
+import {
+  MODEL_CATALOG,
+  isModelFree,
+  isOpenRouterFreeModel,
+  isOpenRouterPaidModel,
+} from "@/lib/models";
 import { AiModel, ChatMessage, ApiKeys, ChatThread } from "@/lib/types";
 import { callGemini, callOpenRouter } from "@/lib/client";
 import { AiInput } from "@/components/AIChatBox";
 import MarkdownLite from "@/components/MarkdownLite";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { useTheme } from "next-themes";
 import ThemeToggler from "@/components/ThemeToggler";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -38,6 +41,9 @@ export default function Home() {
   const messages = useMemo(() => activeThread?.messages ?? [], [activeThread]);
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
   const selectedModels = useMemo(() => MODEL_CATALOG.filter(m => selectedIds.includes(m.id)), [selectedIds]);
+  const openRouterFreeModels = useMemo(() => MODEL_CATALOG.filter(isOpenRouterFreeModel), []);
+  const openRouterPaidModels = useMemo(() => MODEL_CATALOG.filter(isOpenRouterPaidModel), []);
+  const geminiModels = useMemo(() => MODEL_CATALOG.filter((m) => m.provider === 'gemini'), []);
   const anyLoading = loadingIds.length > 0;
   const [copiedAllIdx, setCopiedAllIdx] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -46,6 +52,11 @@ export default function Home() {
 
   const { session, loading } = useAuth();
   const router = useRouter();
+  const dashboardSidebarInputStyle: CSSProperties = {
+    '--dashboard-sidebar-offset': sidebarOpen ? 'calc(16rem + 1.5rem)' : 'calc(3.5rem + 1.5rem)',
+  };
+
+  const isUncensoredModel = (m: AiModel) => /uncensored/i.test(m.label) || /venice/i.test(m.model);
 
   // Move this useMemo higher in the component, before any conditional returns
   const pairs = useMemo(() => {
@@ -453,8 +464,8 @@ export default function Home() {
             {/* Selected models row + Change button */}
             <div className="mb-3 flex flex-wrap items-center gap-2">
               {selectedModels.map((m) => {
-                const isFree = /(\(|\s)free\)/i.test(m.label);
-                const isUncensored = /uncensored/i.test(m.label) || /venice/i.test(m.model);
+                const isFree = isModelFree(m);
+                const isUncensored = isUncensoredModel(m);
                 return (
                 <button
                   key={m.id}
@@ -511,49 +522,51 @@ export default function Home() {
                     <button onClick={() => setModelsModalOpen(false)} className="text-xs px-2 py-1 rounded bg-white/10">Close</button>
                   </div>
                   <div className="text-xs text-muted-foreground mb-3">Selected: {selectedModels.length}/5</div>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <button
+                      onClick={() => setSelectedIds(openRouterFreeModels.slice(0, 5).map((m) => m.id))}
+                      className="text-xs px-2.5 py-1 rounded border border-emerald-300/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                    >
+                      Use OpenRouter Free models (max 5)
+                    </button>
+                    <button
+                      onClick={() => setSelectedIds([])}
+                      className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-card/80"
+                    >
+                      Clear selection
+                    </button>
+                  </div>
                   <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                    {(() => {
-                      const buckets: Record<string, typeof MODEL_CATALOG> = {
-                        Favorites: [],
-                        Uncensored: [],
-                        Free: [],
-                        Good: [],
-                        Others: [],
-                      };
-                      const seen = new Set<string>();
-                      const isFree = (m: AiModel) => /(\(|\s)free\)/i.test(m.label) || m.free;
-                      const isUnc = (m: AiModel) => /uncensored/i.test(m.label) || /venice/i.test(m.model);
-                      const staticFavIds = new Set<string>([
-                        'llama-3.3-70b-instruct',
-                        'gemini-2.5-pro',
-                        'openai-gpt-oss-20b-free',
-                        'glm-4.5-air',
-                        'moonshot-kimi-k2',
-                      ]);
-                      const isFav = (m: AiModel) => selectedIds.includes(m.id) || staticFavIds.has(m.id);
-                      const pick = (m: AiModel) => {
-                        if (isFav(m)) return 'Favorites';
-                        if (isUnc(m)) return 'Uncensored';
-                        if (isFree(m)) return 'Free';
-                        if (m.good) return 'Good';
-                        return 'Others';
-                      };
-                      MODEL_CATALOG.forEach((m) => {
-                        const key = pick(m);
-                        if (!seen.has(m.id)) {
-                          buckets[key].push(m);
-                          seen.add(m.id);
-                        }
-                      });
-
-                      const order: Array<keyof typeof buckets> = ['Favorites', 'Uncensored', 'Free', 'Good', 'Others'];
-                      return order.filter((k) => buckets[k].length > 0).map((k) => (
-                        <div key={k} className="space-y-2">
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">{k}</div>
+                    {[
+                      {
+                        key: 'openrouter-free',
+                        title: 'OpenRouter Free Models',
+                        description: 'No per-model charge on OpenRouter free tier. Requires your OpenRouter API key.',
+                        items: openRouterFreeModels,
+                      },
+                      {
+                        key: 'openrouter-paid',
+                        title: 'OpenRouter Paid Models',
+                        description: 'Uses your OpenRouter account credits/billing.',
+                        items: openRouterPaidModels,
+                      },
+                      {
+                        key: 'gemini',
+                        title: 'Gemini Models',
+                        description: 'Requires your Gemini API key.',
+                        items: geminiModels,
+                      },
+                    ]
+                      .filter((section) => section.items.length > 0)
+                      .map((section) => (
+                        <div key={section.key} className="space-y-2">
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">{section.title}</div>
+                          <div className="text-[11px] text-muted-foreground">{section.description}</div>
                           <div className="flex flex-wrap gap-2">
-                            {buckets[k].map((m) => {
-                              const free = isFree(m);
-                              const unc = isUnc(m);
+                            {section.items.map((m) => {
+                              const free = isOpenRouterFreeModel(m);
+                              const paid = isOpenRouterPaidModel(m);
+                              const unc = isUncensoredModel(m);
                               const selected = selectedIds.includes(m.id);
                               const disabled = !selected && selectedModels.length >= 5;
                               return (
@@ -562,10 +575,10 @@ export default function Home() {
                                   onClick={() => !disabled && toggle(m.id)}
                                   className={`h-9 px-3 text-xs rounded-full border transition-colors flex items-center justify-between gap-3 min-w-[260px] ${
                                     selected
-                                      ? `${m.good ? 'border-amber-300/50' : free ? 'border-emerald-300/50' : 'border-white/20'} bg-white/10`
+                                      ? `${m.good ? 'border-amber-300/50' : free ? 'border-emerald-300/50' : paid ? 'border-sky-300/50' : 'border-white/20'} bg-white/10`
                                       : disabled
                                         ? 'bg-white/5 text-zinc-500 border-white/10 cursor-not-allowed opacity-60'
-                                        : `${m.good ? 'border-amber-300/30' : free ? 'border-emerald-300/30' : 'border-white/10'} bg-white/5 hover:bg-white/10`
+                                        : `${m.good ? 'border-amber-300/30' : free ? 'border-emerald-300/30' : paid ? 'border-sky-300/30' : 'border-white/10'} bg-white/5 hover:bg-white/10`
                                   }`}
                                   title={selected ? 'Click to unselect' : disabled ? 'Limit reached' : 'Click to select'}
                                 >
@@ -582,6 +595,12 @@ export default function Home() {
                                         <span className="hidden sm:inline">Free</span>
                                       </span>
                                     )}
+                                    {paid && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-400/15 text-sky-200 ring-1 ring-sky-300/30">
+                                        <span className="h-2 w-2 rounded-full bg-sky-200" />
+                                        <span className="hidden sm:inline">Paid</span>
+                                      </span>
+                                    )}
                                     {unc && (
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-200 ring-1 ring-rose-300/30">
                                         <span className="h-2 w-2 rounded-full bg-rose-200" />
@@ -590,7 +609,6 @@ export default function Home() {
                                     )}
                                     <span className="truncate max-w-[150px] sm:max-w-[200px]">{m.label}</span>
                                   </span>
-                                  {/* Toggle visual */}
                                   <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${selected ? 'bg-orange-500/40' : 'bg-white/10'}`}>
                                     <span className={`h-3 w-3 rounded-full transition-transform ${selected ? 'bg-orange-200 translate-x-3.5' : 'bg-white translate-x-0.5'}`} />
                                   </span>
@@ -599,8 +617,7 @@ export default function Home() {
                             })}
                           </div>
                         </div>
-                      ));
-                    })()}
+                      ))}
                   </div>
                 </div>
               </div>
@@ -618,7 +635,7 @@ export default function Home() {
                     style={{ gridTemplateColumns: `repeat(${selectedModels.length}, minmax(260px, 1fr))` }}
                   >
                     {selectedModels.map((m) => {
-                      const isFree = /(\(|\s)free\)/i.test(m.label);
+                      const isFree = isModelFree(m);
                       return (
                       <div key={m.id} className={`px-1 py-5 min-h-[60px] border-b flex items-center justify-between overflow-visible ${m.good ? 'border-amber-300/40' : 'border-white/10'}`}>
                         <div className={`text-[13px] leading-normal font-medium pr-2 inline-flex items-center gap-1.5 min-w-0 ${m.good || isFree ? 'opacity-100 text-white' : 'opacity-90'}`}>
@@ -682,7 +699,7 @@ export default function Home() {
                         style={{ gridTemplateColumns: `repeat(${selectedModels.length}, minmax(260px, 1fr))` }}
                       >
                         {selectedModels.map((m) => {
-                          const isFree = /(\(|\s)free\)/i.test(m.label);
+                          const isFree = isModelFree(m);
                           const ans = row.answers.find((a) => a.modelId === m.id);
                           return (
                             <div key={m.id} className="h-full">
@@ -759,7 +776,7 @@ export default function Home() {
             <div className="fixed bottom-0 left-0 right-0 z-20 pt-2 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t dark:from-black/70 from-foreground/10 to-transparent">
               <div
                 className="w-full px-3 lg:px-4 lg:pl-[var(--dashboard-sidebar-offset)]"
-                style={{ ['--dashboard-sidebar-offset' as any]: sidebarOpen ? 'calc(16rem + 1.5rem)' : 'calc(3.5rem + 1.5rem)' }}
+                style={dashboardSidebarInputStyle}
               >
                 <AiInput onSubmit={(text, imageDataUrl) => { send(text, imageDataUrl); }} loading={anyLoading} />
               </div>

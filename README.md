@@ -68,9 +68,3 @@ Open-Fiesta post-processes DeepSeek R1 outputs to remove reasoning tags and conv
 ## 📄 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgements
-
-- Model access provided via [OpenRouter](https://openrouter.ai) and [Google AI](https://ai.google.dev)
-
-*Made with ❤️ for the open-source AI community*
