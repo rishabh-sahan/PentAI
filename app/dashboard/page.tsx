@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import ThemeToggler from "@/components/ThemeToggler";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const normalizeModelId = (id: string) => id.trim().toLowerCase();
 const makeLiveModelUiId = (id: string) =>
@@ -338,10 +339,13 @@ export default function Home() {
             </button>
 
             <div className={`flex items-center justify-between mb-2 ${sidebarOpen ? '' : 'opacity-0 pointer-events-none'}`}>
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                <h2 className="text-sm font-semibold">PentAI</h2>
-              </div>
+              <Link href="/" className="flex items-center gap-2 group" title="Go to PentAI home">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 transition-transform group-hover:scale-110">
+                  <path d="M12 2L22 9.27L18.18 21H5.82L2 9.27L12 2Z" fill="url(#pentLogoGrad)" stroke="currentColor" strokeWidth="1.2" className="text-primary/60" />
+                  <defs><linearGradient id="pentLogoGrad" x1="2" y1="2" x2="22" y2="21"><stop stopColor="hsl(var(--primary))" /><stop offset="1" stopColor="hsl(var(--primary)/0.5)" /></linearGradient></defs>
+                </svg>
+                <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">PentAI</span>
+              </Link>
 
           {/* First-visit API keys modal */}
           {showFirstVisitNote && (
@@ -528,10 +532,13 @@ export default function Home() {
               <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
               <div className="surface-panel absolute left-0 top-0 h-full w-72 bg-card border-r border-border p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                    <h2 className="text-sm font-semibold">PentAI</h2>
-                  </div>
+                  <Link href="/" className="flex items-center gap-2 group" title="Go to PentAI home">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 transition-transform group-hover:scale-110">
+                      <path d="M12 2L22 9.27L18.18 21H5.82L2 9.27L12 2Z" fill="url(#pentLogoGradMobile)" stroke="currentColor" strokeWidth="1.2" className="text-primary/60" />
+                      <defs><linearGradient id="pentLogoGradMobile" x1="2" y1="2" x2="22" y2="21"><stop stopColor="hsl(var(--primary))" /><stop offset="1" stopColor="hsl(var(--primary)/0.5)" /></linearGradient></defs>
+                    </svg>
+                    <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">PentAI</span>
+                  </Link>
                   <button onClick={() => setMobileSidebarOpen(false)} className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Close</button>
                 </div>
                 <button
@@ -563,7 +570,13 @@ export default function Home() {
           <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Menu</button>
-                <h1 className="text-lg font-semibold">PentAI</h1>
+                <Link href="/" className="flex items-center gap-2 group" title="Go to PentAI home">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0 transition-transform group-hover:scale-110">
+                    <path d="M12 2L22 9.27L18.18 21H5.82L2 9.27L12 2Z" fill="url(#pentLogoGradTop)" stroke="currentColor" strokeWidth="1.2" className="text-primary/60" />
+                    <defs><linearGradient id="pentLogoGradTop" x1="2" y1="2" x2="22" y2="21"><stop stopColor="hsl(var(--primary))" /><stop offset="1" stopColor="hsl(var(--primary)/0.5)" /></linearGradient></defs>
+                  </svg>
+                  <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">PentAI</h1>
+                </Link>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggler />

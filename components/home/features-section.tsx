@@ -40,7 +40,7 @@ const features = [
 export function FeaturesSection() {
   return (
     <section id="compare" className="mx-auto w-full max-w-[1320px] px-5 py-16 md:py-24">
-      <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+      <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
         <div>
           <Badge variant="secondary" className="rounded-md px-3 py-1">Built for comparison</Badge>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">
@@ -49,6 +49,31 @@ export function FeaturesSection() {
           <p className="mt-4 max-w-xl text-muted-foreground">
             PentAI is not a generic chat wrapper. It is a comparison desk for choosing the strongest answer, fastest draft, or clearest explanation from the models you already use.
           </p>
+
+          {/* Mini highlights to fill the space */}
+          <div className="mt-8 grid grid-cols-3 gap-4">
+            {[
+              { value: "5", label: "Parallel models" },
+              { value: "0", label: "Data stored on server" },
+              { value: "∞", label: "Chats & threads" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center rounded-lg border border-border/50 bg-card/50 px-3 py-4">
+                <div className="text-2xl font-bold text-primary">{stat.value}</div>
+                <div className="mt-1 text-xs text-muted-foreground leading-tight">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex -space-x-2">
+              {["bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-amber-500"].map((bg, i) => (
+                <div key={i} className={`h-7 w-7 rounded-full ${bg} border-2 border-background flex items-center justify-center`}>
+                  <span className="text-[10px] font-bold text-white">{["G", "L", "Q", "M"][i]}</span>
+                </div>
+              ))}
+            </div>
+            <span>Works with Gemini, Llama, Qwen, Mistral & more</span>
+          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {features.map((feature) => {
