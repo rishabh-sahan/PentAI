@@ -63,7 +63,7 @@ lib/                          # Model catalog and client helpers
 
 ## 🧠 Notes on DeepSeek R1
 
-Open-Fiesta post-processes DeepSeek R1 outputs to remove reasoning tags and convert Markdown to plain text for improved readability while preserving all content integrity.
+Pent-AI post-processes DeepSeek R1 outputs to remove reasoning tags and convert Markdown to plain text for improved readability while preserving all content integrity.
 
 ## 📄 License
 
