@@ -247,10 +247,17 @@ export default function Home() {
     const prompt = text.trim();
     if (!prompt) return;
     if (selectedModels.length === 0) return alert("Select at least one model.");
-    // Enforce BYOK: require user-provided keys for providers being used
-    const needsOpenRouter = selectedModels.some((m) => m.provider === 'openrouter');
-    const needsGemini = selectedModels.some((m) => m.provider === 'gemini');
-    if ((needsOpenRouter && !keys.openrouter) || (needsGemini && !keys.gemini)) {
+    const hasOpenRouterKey = Boolean(keys.openrouter?.trim());
+    const hasGeminiKey = Boolean(keys.gemini?.trim());
+    const runnableModelIds = selectedModels
+      .filter((m) => {
+        if (m.provider === 'openrouter') return hasOpenRouterKey;
+        if (m.provider === 'gemini') return hasGeminiKey;
+        return true;
+      })
+      .map((m) => m.id);
+
+    if (runnableModelIds.length === 0) {
       alert('Please add your own API key(s) in Settings to use these models.');
       window.dispatchEvent(new Event('open-settings'));
       return;
@@ -263,9 +270,31 @@ export default function Home() {
     // input reset handled within AiInput component
 
     // fire all selected models in parallel
-    setLoadingIds(selectedModels.map(m => m.id));
+    setLoadingIds(runnableModelIds);
     await Promise.allSettled(selectedModels.map(async (m: AiModel) => {
       try {
+        if (m.provider === 'gemini' && !hasGeminiKey) {
+          const asst: ChatMessage = {
+            role: "assistant",
+            content: `[${m.label}] Skipped: Gemini API key is missing. Add it in Settings or deselect this model.`.trim(),
+            modelId: m.id,
+            ts: Date.now(),
+          };
+          setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, messages: [...(t.messages ?? nextHistory), asst] } : t));
+          return;
+        }
+
+        if (m.provider === 'openrouter' && !hasOpenRouterKey) {
+          const asst: ChatMessage = {
+            role: "assistant",
+            content: `[${m.label}] Skipped: OpenRouter API key is missing. Add it in Settings or deselect this model.`.trim(),
+            modelId: m.id,
+            ts: Date.now(),
+          };
+          setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, messages: [...(t.messages ?? nextHistory), asst] } : t));
+          return;
+        }
+
         let res: unknown;
         if (m.provider === "gemini") {
           res = await callGemini({ apiKey: keys.gemini || undefined, model: m.model, messages: nextHistory, imageDataUrl });
