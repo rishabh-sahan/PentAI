@@ -18,8 +18,10 @@ import {
   callGemini,
   callOpenRouter,
   callSarvam,
+  fetchGeminiLiveModels,
   fetchOpenRouterLiveModels,
   fetchSarvamLiveModels,
+  type GeminiLiveModel,
   type OpenRouterLiveModel,
   type SarvamLiveModel,
 } from "@/lib/client"
@@ -45,9 +47,10 @@ export default function DashboardPage() {
   const { session, loading } = useAuth()
   const router = useRouter()
 
-  const [selectedIds, setSelectedIds] = useLocalStorage<string[]>("pentai:selected-models", [
-    "gemini-2.5-flash",
-  ])
+  // Empty by default: every model id is now derived from a live catalog, so any
+  // hardcoded seed here would be stale the moment a provider changes its ids.
+  // The seeding effect below fills this once the first sync returns.
+  const [selectedIds, setSelectedIds] = useLocalStorage<string[]>("pentai:selected-models", [])
   const [defaultSeeded, setDefaultSeeded] = useLocalStorage<boolean>(
     "pentai:default-openrouter-seeded",
     false
@@ -65,6 +68,7 @@ export default function DashboardPage() {
 
   const [liveModels, setLiveModels] = useState<OpenRouterLiveModel[] | null>(null)
   const [sarvamModels, setSarvamModels] = useState<SarvamLiveModel[] | null>(null)
+  const [geminiModels, setGeminiModels] = useState<GeminiLiveModel[] | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
 
@@ -114,9 +118,19 @@ export default function DashboardPage() {
     })
   }, [sarvamModels])
 
+  const geminiCatalog = useMemo<AiModel[]>(() => {
+    const source = geminiModels ?? MODEL_CATALOG.map((m) => ({ id: m.model, name: m.label }))
+    return source.map((m) => ({
+      id: makeUiId("gemini", m.id),
+      label: m.name,
+      provider: "gemini" as const,
+      model: m.id,
+    }))
+  }, [geminiModels])
+
   const catalog = useMemo<AiModel[]>(
-    () => [...liveFreeCatalog, ...MODEL_CATALOG, ...sarvamCatalog],
-    [liveFreeCatalog, sarvamCatalog]
+    () => [...liveFreeCatalog, ...geminiCatalog, ...sarvamCatalog],
+    [liveFreeCatalog, geminiCatalog, sarvamCatalog]
   )
 
   const freeModels = useMemo(() => catalog.filter((m) => m.free), [catalog])
@@ -136,9 +150,10 @@ export default function DashboardPage() {
   const syncModels = useCallback(async () => {
     setSyncing(true)
     // Both catalogs are public; one failing shouldn't blank the other.
-    const [orResult, sarvamResult] = await Promise.allSettled([
+    const [orResult, sarvamResult, geminiResult] = await Promise.allSettled([
       fetchOpenRouterLiveModels({ apiKey: keys.openrouter }),
       fetchSarvamLiveModels(),
+      fetchGeminiLiveModels({ apiKey: keys.gemini }),
     ])
 
     const errors: string[] = []
@@ -165,9 +180,20 @@ export default function DashboardPage() {
       errors.push(`Sarvam: ${reason}`)
     }
 
+    if (geminiResult.status === "fulfilled" && Array.isArray(geminiResult.value?.models)) {
+      setGeminiModels(geminiResult.value.models)
+      // A bad key still yields the fallback list, so surface why it's limited.
+      if (geminiResult.value.error) errors.push(`Gemini: ${geminiResult.value.error}`)
+    } else {
+      setGeminiModels(null)
+      const reason =
+        geminiResult.status === "rejected" ? String(geminiResult.reason) : "unknown"
+      errors.push(`Gemini: ${reason}`)
+    }
+
     setSyncError(errors.length ? errors.join(" · ") : null)
     setSyncing(false)
-  }, [keys.openrouter])
+  }, [keys.openrouter, keys.gemini])
 
   /* ----------------------------------------------------------------- effects */
 
@@ -183,10 +209,10 @@ export default function DashboardPage() {
   // Only prunes once both syncs have resolved, so a slow fetch can't wipe a
   // valid selection mid-load.
   useEffect(() => {
-    if (!liveModels || !sarvamModels) return
+    if (!liveModels || !sarvamModels || !geminiModels) return
     const allowed = new Set(catalog.map((m) => m.id))
     setSelectedIds((prev) => prev.filter((id) => allowed.has(id)))
-  }, [catalog, liveModels, sarvamModels, setSelectedIds])
+  }, [catalog, liveModels, sarvamModels, geminiModels, setSelectedIds])
 
   // One-time: fill the default selection from models that are actually live and
   // free right now, so the first run is never seeded with stale ids.

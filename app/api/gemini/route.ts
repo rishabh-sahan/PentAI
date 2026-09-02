@@ -15,9 +15,16 @@ export async function POST(req: NextRequest) {
     const { messages, model, apiKey: apiKeyFromBody, attachments } = await req.json();
     const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';
     if (!apiKey) return new Response(JSON.stringify({ error: 'Missing Gemini API key. Add your own key in Settings.' }), { status: 400 });
-    const allowed = new Set(['gemini-2.5-flash', 'gemini-2.5-pro']);
-    const requested = typeof model === 'string' ? model : 'gemini-2.5-flash';
-    const geminiModel = allowed.has(requested) ? requested : 'gemini-2.5-flash';
+    /*
+      No allow-list: Google retires and adds model ids continuously, and a
+      hardcoded set silently rewrote every new model back to a dead default.
+      The catalog comes from /api/gemini/models, so whatever the picker offers
+      is already known-valid for this key. Only the shape is validated here.
+    */
+    const geminiModel = typeof model === 'string' && model.trim() ? model.trim() : '';
+    if (!geminiModel) {
+      return new Response(JSON.stringify({ error: 'Missing model id' }), { status: 400 });
+    }
 
     // Convert OpenAI-style messages to Gemini contents
     // Gemini expects: { contents: [{ role, parts: [{ text }] }, ...] }

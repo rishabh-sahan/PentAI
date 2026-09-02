@@ -7,6 +7,11 @@ export type OpenRouterLiveModel = {
   isFree: boolean;
 };
 
+export type GeminiLiveModel = {
+  id: string;
+  name: string;
+};
+
 export type SarvamLiveModel = {
   id: string;
   name: string;
@@ -67,6 +72,16 @@ export async function fetchOpenRouterLiveModels(args?: {
   if (args?.apiKey?.trim()) headers['x-openrouter-key'] = args.apiKey.trim();
 
   const res = await fetch('/api/openrouter/models', { method: 'GET', headers });
+  return res.json();
+}
+
+export async function fetchGeminiLiveModels(args?: {
+  apiKey?: string;
+}): Promise<{ models: GeminiLiveModel[]; usedFallback?: boolean; error?: string }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (args?.apiKey?.trim()) headers['x-gemini-key'] = args.apiKey.trim();
+
+  const res = await fetch('/api/gemini/models', { method: 'GET', headers });
   return res.json();
 }
 

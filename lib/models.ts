@@ -1,23 +1,29 @@
 import { AiModel } from './types';
 
-// Gemini models are hardcoded since they don't come from OpenRouter's catalog.
-// OpenRouter models are NOT hardcoded here — their free-model roster turns over
-// too fast for a static list to stay accurate. The dashboard fetches the live
-// OpenRouter catalog at runtime (see fetchOpenRouterLiveModels in lib/client.ts)
-// and builds the selectable OpenRouter list from that instead.
+/*
+  Fallback only.
+
+  Every provider's catalog is fetched live at runtime — OpenRouter and Sarvam
+  from public endpoints, Gemini from Google's using the user's own key. This
+  list exists solely so the Google tab isn't empty before a key is entered.
+
+  Do not treat these ids as authoritative: Google retires them without warning
+  (gemini-2.5-pro and -2.5-flash both stopped accepting new keys), which is
+  exactly why nothing here is used once the live sync returns.
+*/
 export const MODEL_CATALOG: AiModel[] = [
   {
-    id: 'gemini-2.5-pro',
-    label: 'Gemini 2.5 Pro',
+    id: 'gemini-3.6-flash',
+    label: 'Gemini 3.6 Flash',
     provider: 'gemini',
-    model: 'gemini-2.5-pro',
-    good: true,
+    model: 'gemini-3.6-flash',
   },
   {
-    id: 'gemini-2.5-flash',
-    label: 'Gemini 2.5 Flash',
+    id: 'gemini-3.1-pro-preview',
+    label: 'Gemini 3.1 Pro Preview',
     provider: 'gemini',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-pro-preview',
+    good: true,
   },
 ];
 
