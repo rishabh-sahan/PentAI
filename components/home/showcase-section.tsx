@@ -1,55 +1,64 @@
-"use client"
+import { Columns3, KeyRound, Zap, MessagesSquare, Layers, ImageIcon } from "lucide-react"
 
-import Image from "next/image"
-import { CheckCircle2, Copy, Rows3 } from "lucide-react"
+const CAPABILITIES = [
+  {
+    icon: Columns3,
+    title: "Answers line up",
+    body: "Every reply to the same question sits in its own column on one row. Differences jump out instead of hiding in five separate tabs.",
+  },
+  {
+    icon: Zap,
+    title: "All at the same time",
+    body: "Models are asked together, not one after another. You wait for the slowest one — not for all five added up.",
+  },
+  {
+    icon: Layers,
+    title: "Always-current model list",
+    body: "Free models come and go every week. PentAI reads the live list each time you open it, so you never pick one that's already gone.",
+  },
+  {
+    icon: KeyRound,
+    title: "Your keys stay yours",
+    body: "Keys are saved in your browser and sent straight to the provider. Our server keeps none of its own, so your usage is only ever yours.",
+  },
+  {
+    icon: MessagesSquare,
+    title: "Chats you can come back to",
+    body: "Rename, pin and delete conversations. The comparison you ran last week is still there when you need to point at it.",
+  },
+  {
+    icon: ImageIcon,
+    title: "Ask about a picture",
+    body: "Attach an image to your question and Gemini models will read it — handy for screenshots, diagrams and error messages.",
+  },
+]
 
 export function ShowcaseSection() {
   return (
-    <section className="border-y border-border bg-card/35">
-      <div className="mx-auto grid w-full max-w-[1320px] gap-8 px-5 py-16 md:py-24 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-        <div className="order-2 lg:order-1">
-          <div className="overflow-hidden rounded-lg border border-border bg-background shadow-xl shadow-foreground/10">
-            <Image
-              src="/images/product-ui.jpeg"
-              alt="PentAI dashboard preview"
-              width={1100}
-              height={760}
-              className="h-auto w-full object-cover"
-            />
-          </div>
+    <section id="features" className="border-b border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 md:py-28">
+        <div data-reveal className="mx-auto max-w-2xl text-center">
+          <p className="text-base font-semibold uppercase tracking-[0.12em] text-primary md:text-lg">Why it&apos;s useful</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            Built for judging answers, not collecting them.
+          </h2>
         </div>
 
-        <div className="order-1 lg:order-2">
-          <div className="text-sm font-semibold uppercase tracking-wide text-primary">Dashboard first</div>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            The homepage now points to the product you actually built.
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            The core experience is the dashboard: a sidebar for chat history, a top row for selected models, a comparison grid for answers, and a fixed input that stays ready while you work.
-          </p>
-
-          <div className="mt-7 grid gap-3">
-            {[
-              { icon: Rows3, title: "Aligned answer columns", body: "Each selected model responds in its own lane for fast scanning." },
-              { icon: Copy, title: "Copy individual or grouped results", body: "Grab one response or combine every model answer for a prompt." },
-              { icon: CheckCircle2, title: "Works across light and dark", body: "Shared tokens keep surfaces, borders, text, and badges consistent." },
-            ].map((item) => {
-              const Icon = item.icon
-              return (
-                <div key={item.title} className="rounded-lg border border-border bg-background/70 p-4">
-                  <div className="flex gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">{item.title}</div>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 md:mt-16 lg:grid-cols-3">
+          {CAPABILITIES.map((item, i) => (
+            <div
+              key={item.title}
+              data-reveal
+              data-reveal-delay={(i % 3) * 80}
+              className="hover-lift rounded-xl border border-border bg-card p-6 hover:border-primary/35"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <item.icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="mt-5 text-base font-medium text-foreground">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>

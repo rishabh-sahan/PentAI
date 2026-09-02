@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model, apiKey: apiKeyFromBody, referer, title } = await req.json();
+    const { messages, model, apiKey: apiKeyFromBody, referer, title, attachments } = await req.json();
     const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';
     if (!apiKey) return new Response(JSON.stringify({ error: 'Missing OpenRouter API key. Add your own key in Settings.' }), { status: 400 });
     if (!model) return new Response(JSON.stringify({ error: 'Missing model id' }), { status: 400 });
@@ -21,7 +21,39 @@ export async function POST(req: NextRequest) {
         .filter((m) => isRole(m.role));
     // Keep last 8 messages to avoid overly long histories for picky providers
     const trimmed = (arr: OutMsg[]) => (arr.length > 8 ? arr.slice(-8) : arr);
-    const makeBody = (msgs: unknown) => ({ model, messages: trimmed(sanitize((msgs as unknown[]) || [])) });
+    /*
+      Images go on the final user turn using OpenAI's vision content-block
+      shape, which OpenRouter forwards to vision-capable models. Text-only
+      models ignore the blocks rather than erroring, so this is safe to send
+      whenever an image is attached.
+    */
+    type InAttachment = { kind?: unknown; dataUrl?: unknown };
+    const imageUrls = (Array.isArray(attachments) ? (attachments as InAttachment[]) : [])
+      .filter((a) => a?.kind === 'image' && typeof a?.dataUrl === 'string')
+      .map((a) => String(a.dataUrl));
+
+    const withImages = (msgs: OutMsg[]) => {
+      if (imageUrls.length === 0) return msgs;
+      const out: Array<OutMsg | { role: OutMsg['role']; content: unknown[] }> = [...msgs];
+      for (let i = out.length - 1; i >= 0; i--) {
+        const m = out[i] as OutMsg;
+        if (m.role !== 'user') continue;
+        out[i] = {
+          role: 'user',
+          content: [
+            { type: 'text', text: m.content },
+            ...imageUrls.map((url) => ({ type: 'image_url', image_url: { url } })),
+          ],
+        };
+        break;
+      }
+      return out;
+    };
+
+    const makeBody = (msgs: unknown) => ({
+      model,
+      messages: withImages(trimmed(sanitize((msgs as unknown[]) || []))),
+    });
     const requestInit = (bodyObj: unknown): RequestInit => ({
       method: 'POST',
       headers: {
@@ -52,8 +84,17 @@ export async function POST(req: NextRequest) {
         return 'Unknown error';
       })();
       if (resp.status === 429) {
-        // Convert to a friendly guidance text while preserving raw error
-        const text = 'Your OpenRouter API key hit a rate limit. Please retry after a moment or upgrade your plan/limits.';
+        /*
+          OpenRouter returns 429 for two different situations and the remedy is
+          not the same, so don't assert one when the message says the other:
+            - your key's own cap ("rate limit", "quota", "per day/minute")
+            - the upstream free pool being saturated ("Provider returned error")
+        */
+        const isKeyLimit = /rate.?limit|quota|per (day|minute)|too many requests/i.test(errStr);
+        const advice = isKeyLimit
+          ? 'Free models share roughly 20 requests/minute and a daily cap across your whole key. Selecting fewer free models, or adding credit to the account, raises it.'
+          : 'This usually means the free pool for this model is saturated right now rather than a problem with your key. Retrying shortly, or picking a different free model, normally works.';
+        const text = `OpenRouter returned 429 for ${model}: ${errStr}\n\n${advice}`;
         return Response.json({ text, error: errStr, code: 429, provider: 'openrouter' });
       }
       if (resp.status === 404 && /model not found/i.test(errStr)) {
@@ -74,17 +115,17 @@ export async function POST(req: NextRequest) {
           if (resp.ok) {
             // continue to normalization below using new data
           } else {
-            const friendly2 = `Provider returned error for ${model} (after retry) [status ${resp.status}]`;
-            return Response.json({ text: friendly2, code: resp.status, provider: 'openrouter' }, { status: resp.status });
+            const friendly2 = `OpenRouter couldn't run ${model} after a retry (HTTP ${resp.status}): ${errStr}`;
+            return Response.json({ text: friendly2, error: errStr, code: resp.status, provider: 'openrouter' }, { status: resp.status });
           }
         } else {
-          const friendly = `Provider returned error for ${model} [status ${resp.status}]`;
-          return Response.json({ text: friendly, code: resp.status, provider: 'openrouter' }, { status: resp.status });
+          const friendly = `OpenRouter couldn't run ${model} (HTTP ${resp.status}): ${errStr}`;
+          return Response.json({ text: friendly, error: errStr, code: resp.status, provider: 'openrouter' }, { status: resp.status });
         }
       } else {
         // Return structured JSON but also a user-friendly text to render in UI
-        const friendly = `Provider returned error${model ? ` for ${model}` : ''} [status ${resp.status}]`;
-        return Response.json({ text: friendly, code: resp.status, provider: 'openrouter' }, { status: resp.status });
+        const friendly = `OpenRouter couldn't run ${model} (HTTP ${resp.status}): ${errStr}`;
+        return Response.json({ text: friendly, error: errStr, code: resp.status, provider: 'openrouter' }, { status: resp.status });
       }
     }
 

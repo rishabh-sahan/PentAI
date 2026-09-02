@@ -1,61 +1,53 @@
-"use client"
-
-import { Card, CardContent } from "@/components/ui/card"
-import { Braces, FileText, Lightbulb, SearchCheck } from "lucide-react"
-
-const useCases = [
+const USE_CASES = [
   {
-    title: "Code decisions",
-    description: "Ask multiple models for a refactor, compare risk, then keep the cleanest patch direction.",
-    icon: Braces,
+    tag: "For developers",
+    title: "Choosing which model to build on",
+    body: "Before you wire your app to one provider, run your real prompts through the candidates together and see which one handles your awkward cases.",
   },
   {
-    title: "Research synthesis",
-    description: "Use one model for breadth and another for critique before committing to an answer.",
-    icon: SearchCheck,
+    tag: "For everyone",
+    title: "Checking an answer that smells wrong",
+    body: "When a model tells you something confidently and you're not convinced, ask four more. Agreement is a good sign; disagreement tells you to dig.",
   },
   {
-    title: "Content drafts",
-    description: "Compare tone, structure, and clarity across models without rewriting prompts in five tabs.",
-    icon: FileText,
+    tag: "For writers",
+    title: "Getting unstuck on a draft",
+    body: "Different models open a piece in completely different ways. Read four first paragraphs at once and keep the one worth continuing.",
   },
   {
-    title: "Idea pressure testing",
-    description: "Let models disagree productively so your final plan is sharper.",
-    icon: Lightbulb,
+    tag: "For students",
+    title: "Learning without paying",
+    body: "Free models handle most everyday questions well. Compare them against a paid one and only spend where it actually makes a difference.",
   },
 ]
 
 export function UseCasesSection() {
   return (
-    <section id="use-cases" className="mx-auto w-full max-w-[1320px] px-5 py-16 md:py-24">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <div className="text-sm font-semibold uppercase tracking-wide text-primary">Use cases</div>
-          <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight md:text-5xl">
-            Useful when one answer is not enough.
+    <section id="use-cases" className="border-b border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 md:py-28">
+        <div data-reveal className="mx-auto max-w-2xl text-center">
+          <p className="text-base font-semibold uppercase tracking-[0.12em] text-primary md:text-lg">Use cases</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            When a second opinion is the whole point.
           </h2>
         </div>
-        <p className="max-w-md text-muted-foreground">
-          PentAI is strongest when you want judgment, not just generation.
-        </p>
-      </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {useCases.map((useCase) => {
-          const Icon = useCase.icon
-          return (
-            <Card key={useCase.title} className="rounded-lg border-border/70 bg-card/70 py-0 shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="mt-5 font-semibold">{useCase.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{useCase.description}</p>
-              </CardContent>
-            </Card>
-          )
-        })}
+        <div className="mt-12 grid gap-5 md:mt-16 md:grid-cols-2">
+          {USE_CASES.map((item, i) => (
+            <div
+              key={item.title}
+              data-reveal
+              data-reveal-delay={(i % 2) * 90}
+              className="hover-lift rounded-xl border border-border bg-card p-6 hover:border-primary/35 md:p-7"
+            >
+              <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                {item.tag}
+              </span>
+              <h3 className="mt-4 text-lg font-medium text-foreground">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

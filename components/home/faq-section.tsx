@@ -1,101 +1,89 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { Plus } from "lucide-react"
 
-const faqData = [
+const FAQS = [
   {
-    question: "What is PentAI built for?",
+    question: "What does PentAI actually do?",
     answer:
-      "PentAI is built for comparing multiple AI model responses in one dashboard instead of jumping between separate tools.",
+      "You write one prompt and it goes to up to five AI models at the same time. Their answers appear in aligned columns on the same row, so you can compare them directly instead of opening five tabs and scrolling between them.",
   },
   {
-    question: "Which providers does it support?",
+    question: "Which models can I use?",
     answer:
-      "The current project supports Gemini and OpenRouter-powered models, including free and paid OpenRouter model groups.",
+      "Google's Gemini models, every free model OpenRouter currently offers, and Sarvam's models including the open-weight ones they host. The lists are fetched live rather than hardcoded, so they always reflect what is actually available right now — those rosters change often.",
+  },
+  {
+    question: "Do I need to pay for anything?",
+    answer:
+      "No. OpenRouter's free models cost nothing to call, and Gemini has a free tier. You do need your own API keys, which are free to create — there is no PentAI subscription.",
   },
   {
     question: "Where are my API keys stored?",
     answer:
-      "Keys are stored locally in your browser localStorage and sent with your requests only when those providers are used.",
+      "In your browser's local storage, on your device. They are attached to your own requests and nothing else. The server keeps no keys of its own, so nobody else's traffic can ever be billed to yours.",
   },
   {
-    question: "Can I keep multiple chats organized?",
+    question: "Why do I sometimes hit a rate limit?",
     answer:
-      "Yes. The dashboard includes persistent chat threads, active chat state, rename, pin, delete, and selected model persistence.",
+      "OpenRouter caps its free tier at roughly 20 requests per minute shared across all free models, with a daily cap too. Because every prompt calls all your selected models at once, five free models means five requests per message — which reaches that cap quickly.",
+  },
+  {
+    question: "Are my conversations saved?",
+    answer:
+      "Yes, in your browser. Threads can be renamed, pinned and deleted, and the models you picked are remembered between visits. Nothing is written to a server database.",
   },
 ]
 
-interface FAQItemProps {
-  question: string
-  answer: string
-  isOpen: boolean
-  onToggle: () => void
-}
-
-const FAQItem = ({ question, answer, isOpen, onToggle }: FAQItemProps) => {
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    onToggle()
-  }
-  return (
-    <div
-      className="w-full overflow-hidden rounded-lg border border-border bg-card/70 shadow-sm transition-all duration-500 ease-out cursor-pointer hover:bg-accent/40"
-      onClick={handleClick}
-    >
-      <div className="w-full px-5 py-[18px] pr-4 flex justify-between items-center gap-5 text-left transition-all duration-300 ease-out">
-        <div className="flex-1 text-foreground text-base font-medium leading-6 break-words">{question}</div>
-        <div className="flex justify-center items-center">
-          <ChevronDown
-            className={`w-6 h-6 text-muted-foreground transition-all duration-500 ease-out ${isOpen ? "rotate-180 scale-110" : "rotate-0 scale-100"}`}
-          />
-        </div>
-      </div>
-      <div
-        className={`overflow-hidden transition-all duration-500 ease-out ${isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}
-        style={{
-          transitionProperty: "max-height, opacity, padding",
-          transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
-      >
-        <div
-          className={`px-5 transition-all duration-500 ease-out ${isOpen ? "pb-[18px] pt-2 translate-y-0" : "pb-0 pt-0 -translate-y-2"}`}
-        >
-          <div className="text-foreground/80 text-sm font-normal leading-6 break-words">{answer}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function FAQSection() {
-  const [openItems, setOpenItems] = useState<Set<number>>(new Set())
-  const toggleItem = (index: number) => {
-    const newOpenItems = new Set(openItems)
-    if (newOpenItems.has(index)) {
-      newOpenItems.delete(index)
-    } else {
-      newOpenItems.add(index)
-    }
-    setOpenItems(newOpenItems)
-  }
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
+
   return (
-    <section id="faq-section" className="w-full px-5 py-16 md:py-24 relative flex flex-col justify-center items-center">
-      <div className="self-stretch pt-8 pb-8 md:pt-14 md:pb-14 flex flex-col justify-center items-center gap-2 relative z-10">
-        <div className="flex flex-col justify-start items-center gap-4">
-          <h2 className="w-full max-w-[435px] text-center text-foreground text-4xl font-semibold leading-10 break-words">
-            Frequently Asked Questions
-          </h2>
-          <p className="self-stretch text-center text-muted-foreground text-sm font-medium leading-[18.20px] break-words">
-            Practical details about the workspace, providers, and local settings.
-          </p>
+    <section id="faq" className="border-b border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 md:py-28">
+        <div className="grid gap-12 md:grid-cols-[1fr_1.4fr] md:gap-16">
+          <div data-reveal>
+            <p className="text-base font-semibold uppercase tracking-[0.12em] text-primary md:text-lg">FAQ</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              Questions, answered.
+            </h2>
+          </div>
+
+          <div data-reveal data-reveal-delay="80" className="divide-y divide-border border-t border-border">
+            {FAQS.map((faq, index) => {
+              const isOpen = openIndex === index
+              return (
+                <div key={faq.question}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-start justify-between gap-6 py-5 text-left"
+                  >
+                    <span className="text-[15px] font-medium text-foreground">{faq.question}</span>
+                    <Plus
+                      className={`mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                        isOpen ? "rotate-45" : ""
+                      }`}
+                    />
+                  </button>
+                  <div
+                    className={`grid transition-all duration-200 ease-out ${
+                      isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="pb-5 pr-10 text-sm leading-relaxed text-muted-foreground">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </div>
-      <div className="w-full max-w-[600px] pt-0.5 pb-10 flex flex-col justify-start items-start gap-4 relative z-10">
-        {faqData.map((faq, index) => (
-          <FAQItem key={index} {...faq} isOpen={openItems.has(index)} onToggle={() => toggleItem(index)} />
-        ))}
       </div>
     </section>
   )

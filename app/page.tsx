@@ -1,50 +1,30 @@
+import { Header } from "@/components/home/header"
 import { HeroSection } from "@/components/home/hero-section"
-import { FeaturesSection } from "@/components/home/features-section"
-import { ShowcaseSection } from "@/components/home/showcase-section"
-import { AboutSection } from "@/components/home/about-section"
+import { ProviderLogos } from "@/components/home/provider-logos"
+import { StatsSection } from "@/components/home/stats-section"
 import { HowItWorksSection } from "@/components/home/how-it-works"
-import { IntegrationsSection } from "@/components/home/integrations-section"
+import { ShowcaseSection } from "@/components/home/showcase-section"
 import { UseCasesSection } from "@/components/home/use-cases-section"
 import { FAQSection } from "@/components/home/faq-section"
-import { CTASection } from "@/components/home/cta-section"
 import { FooterSection } from "@/components/home/footer-section"
-import { AnimatedSection } from "@/components/home/animated-section"
+import { RevealOnScroll } from "@/components/home/reveal"
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden pb-0 text-foreground">
-      <div className="relative z-10">
-        <main className="relative">
-          <HeroSection />
-        </main>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <FeaturesSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <ShowcaseSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <AboutSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <HowItWorksSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <IntegrationsSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <UseCasesSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <FAQSection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <CTASection />
-        </AnimatedSection>
-        <AnimatedSection className="relative z-10" delay={0.08}>
-          <FooterSection />
-        </AnimatedSection>
-      </div>
+    <div className="min-h-screen bg-background text-foreground">
+      <RevealOnScroll />
+      {/* Sits above <main> so nothing with overflow-hidden can trap its sticky. */}
+      <Header />
+      <main>
+        <HeroSection />
+        <ProviderLogos />
+        <StatsSection />
+        <HowItWorksSection />
+        <ShowcaseSection />
+        <UseCasesSection />
+        <FAQSection />
+      </main>
+      <FooterSection />
     </div>
   )
 }

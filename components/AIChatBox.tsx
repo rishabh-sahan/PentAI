@@ -2,183 +2,242 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { Send, Loader2, X, Plus, Globe } from "lucide-react"
+import { ArrowUp, FileText, FileType2, Loader2, Paperclip, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  ACCEPT_ATTR,
+  formatBytes,
+  toAttachment,
+  type Attachment,
+} from "@/lib/attachments"
 
-interface UseAutoResizeTextareaProps {
-  minHeight: number
-  maxHeight?: number
-}
+// One 24px line plus the 8px vertical padding on each side. Setting this to the
+// line height alone leaves scrollHeight permanently above the element height,
+// which makes the browser paint a scrollbar on an empty single-line box.
+const MIN_HEIGHT = 40
+const MAX_HEIGHT = 200
 
-function useAutoResizeTextarea({
-  minHeight,
-  maxHeight,
-}: UseAutoResizeTextareaProps) {
+function useAutoResizeTextarea(minHeight: number, maxHeight: number) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const adjustHeight = useCallback(
     (reset?: boolean) => {
       const textarea = textareaRef.current
       if (!textarea) return
-
+      textarea.style.height = `${minHeight}px`
       if (reset) {
-        textarea.style.height = `${minHeight}px`
+        textarea.style.overflowY = "hidden"
         return
       }
-
-      textarea.style.height = `${minHeight}px`
-      const newHeight = Math.max(
-        minHeight,
-        Math.min(textarea.scrollHeight, maxHeight ?? Number.POSITIVE_INFINITY)
-      )
-
-      textarea.style.height = `${newHeight}px`
+      const next = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)
+      textarea.style.height = `${next}px`
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden"
     },
     [minHeight, maxHeight]
   )
 
   useEffect(() => {
     const textarea = textareaRef.current
-    if (textarea) {
-      textarea.style.height = `${minHeight}px`
-    }
+    if (!textarea) return
+    textarea.style.height = `${minHeight}px`
+    textarea.style.overflowY = "hidden"
   }, [minHeight])
-
-  useEffect(() => {
-    const handleResize = () => adjustHeight()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [adjustHeight])
 
   return { textareaRef, adjustHeight }
 }
 
-const MIN_HEIGHT = 48
-const MAX_HEIGHT = 164
-
-export function AiInput({ onSubmit, loading = false }: { onSubmit: (text: string, imageDataUrl?: string, webSearch?: boolean) => void; loading?: boolean }) {
+export function AiInput({
+  onSubmit,
+  loading = false,
+}: {
+  onSubmit: (text: string, attachments: Attachment[]) => void
+  loading?: boolean
+}) {
   const [value, setValue] = useState("")
-  const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: MIN_HEIGHT,
-    maxHeight: MAX_HEIGHT,
-  })
-  const [showSearch, setShowSearch] = useState(true)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [reading, setReading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { textareaRef, adjustHeight } = useAutoResizeTextarea(MIN_HEIGHT, MAX_HEIGHT)
 
-  const handelClose = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "" // Reset file input
-    }
-    setImagePreview(null) // Use null instead of empty string
-  }
+  const usable = attachments.filter((a) => a.kind !== "unsupported")
+  const canSend = (value.trim().length > 0 || usable.length > 0) && !loading && !reading
 
-  const handelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null
-    if (file) {
-      setImageFile(file)
-      setImagePreview(URL.createObjectURL(file))
-    }
-  }
-
-  const handleSubmit = async () => {
-    let dataUrl: string | undefined
-    if (imageFile) {
-      dataUrl = await new Promise<string>((resolve) => {
-        const fr = new FileReader()
-        fr.onload = () => resolve(String(fr.result))
-        fr.readAsDataURL(imageFile)
+  const addFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setReading(true)
+    try {
+      const parsed = await Promise.all(Array.from(files).map(toAttachment))
+      setAttachments((prev) => {
+        const byId = new Map(prev.map((a) => [a.id, a]))
+        for (const a of parsed) byId.set(a.id, a)
+        return Array.from(byId.values())
       })
+    } finally {
+      setReading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
-    onSubmit(value.trim(), dataUrl, showSearch)
+  }
+
+  const removeAttachment = (id: string) =>
+    setAttachments((prev) => prev.filter((a) => a.id !== id))
+
+  const handleSubmit = () => {
+    if (!canSend) return
+    onSubmit(value.trim(), usable)
     setValue("")
-    setImageFile(null)
-    setImagePreview(null)
+    setAttachments([])
     adjustHeight(true)
   }
 
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview)
-      }
+  // Paste an image straight from the clipboard.
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const files = e.clipboardData?.files
+    if (files && files.length > 0) {
+      e.preventDefault()
+      void addFiles(files)
     }
-  }, [imagePreview])
-  return (
-    <div className="w-full py-4">
-      <div className="relative w-full px-3 lg:px-4">
-        <div className="w-full flex items-center gap-3 rounded-lg border border-border bg-card/95 px-3 py-2 shadow-lg ring-1 ring-ring/15 backdrop-blur">
-          <label className="cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-full bg-secondary text-secondary-foreground border border-border">
-            <input type="file" ref={fileInputRef} onChange={handelChange} className="hidden" />
-            <Plus className="w-4 h-4" />
-          </label>
-          <div className="relative grow">
-            <Textarea
-              id="ai-input-04"
-              value={value}
-              placeholder=""
-              className="w-full bg-transparent border-none text-foreground resize-none focus-visible:ring-0 leading-[1.4] px-0 py-2 min-h-[44px] flex items-center"
-              ref={textareaRef}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit()
-                }
-              }}
-              onChange={(e) => {
-                setValue(e.target.value)
-                adjustHeight()
-              }}
-            />
+  }
 
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowSearch((s) => !s)}
-            className={cn(
-              "inline-flex items-center gap-1.5 h-9 rounded-md border px-2.5 text-xs transition-all",
-              showSearch
-                ? "bg-primary/10 text-primary border-primary/30"
-                : "bg-secondary text-muted-foreground border-border hover:text-foreground"
-            )}
-            title={showSearch ? "Search the web enabled" : "Enable web search"}
-          >
-            <Globe className="w-4 h-4" />
-            <span className="hidden sm:inline">{showSearch ? "Search" : "Off"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className={cn(
-              "inline-flex items-center justify-center w-9 h-9 rounded-md border shadow-sm transition-all",
-              loading || value.trim().length === 0
-                ? "bg-secondary text-muted-foreground border-border cursor-not-allowed opacity-60"
-                : "bg-primary text-primary-foreground border-border hover:brightness-95"
-            )}
-            disabled={loading || value.trim().length === 0}
-            aria-busy={loading}
-            aria-label="Send"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      {attachments.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {attachments.map((a) => (
+            <AttachmentChip key={a.id} attachment={a} onRemove={() => removeAttachment(a.id)} />
+          ))}
         </div>
-        {imagePreview && (
-          <div className="absolute -top-28 left-2 flex items-center gap-2 bg-card border border-border rounded-xl p-2 shadow-lg">
-            <div className="relative h-[64px] w-[64px] rounded-lg overflow-hidden border border-border">
-              <Image className="object-cover h-full w-full" src={imagePreview} height={160} width={160} alt="attached image" />
-              <button onClick={handelClose} className="absolute top-1 right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-black/70 text-white border border-white/20" aria-label="Remove image">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-            <span className="text-sm text-muted-foreground">Image attached</span>
-          </div>
-        )}
+      )}
+
+      <div
+        className="flex items-end gap-2 rounded-xl border border-border bg-card p-2 shadow-sm transition-colors focus-within:border-primary/45"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault()
+          void addFiles(e.dataTransfer.files)
+        }}
+      >
+        <label
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          title="Attach files — documents, code, PDFs or images"
+        >
+          <input
+            type="file"
+            multiple
+            accept={ACCEPT_ATTR}
+            ref={fileInputRef}
+            onChange={(e) => void addFiles(e.target.files)}
+            className="hidden"
+          />
+          {reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+          <span className="sr-only">Attach files</span>
+        </label>
+
+        <Textarea
+          value={value}
+          rows={1}
+          placeholder="Ask all selected models at once…"
+          // field-sizing-content fights the JS resize above, so it's disabled here.
+          className="min-h-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-[15px] leading-6 shadow-none [field-sizing:fixed] focus-visible:ring-0"
+          ref={textareaRef}
+          onPaste={handlePaste}
+          onChange={(e) => {
+            setValue(e.target.value)
+            adjustHeight()
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSend}
+          aria-label="Send message"
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
+            canSend
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "bg-muted text-muted-foreground"
+          )}
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+        </button>
       </div>
+
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Enter to send · Shift + Enter for a new line · drag, paste or attach files
+      </p>
+    </div>
+  )
+}
+
+function AttachmentChip({
+  attachment,
+  onRemove,
+}: {
+  attachment: Attachment
+  onRemove: () => void
+}) {
+  const broken = attachment.kind === "unsupported"
+
+  return (
+    <div
+      className={cn(
+        "group flex max-w-[15rem] items-center gap-2 rounded-lg border py-1.5 pl-1.5 pr-2",
+        broken ? "border-destructive/40 bg-destructive/8" : "border-border bg-card"
+      )}
+      title={attachment.problem ?? attachment.name}
+    >
+      {attachment.kind === "image" && attachment.dataUrl ? (
+        <Image
+          src={attachment.dataUrl}
+          alt=""
+          width={56}
+          height={56}
+          className="h-7 w-7 shrink-0 rounded object-cover"
+          unoptimized
+        />
+      ) : (
+        <span
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded",
+            broken ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"
+          )}
+        >
+          {attachment.kind === "pdf" ? (
+            <FileType2 className="h-3.5 w-3.5" />
+          ) : (
+            <FileText className="h-3.5 w-3.5" />
+          )}
+        </span>
+      )}
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs text-foreground">{attachment.name}</span>
+        <span
+          className={cn(
+            "block truncate text-[10px]",
+            broken ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {attachment.problem ?? formatBytes(attachment.size)}
+        </span>
+      </span>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${attachment.name}`}
+        className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }

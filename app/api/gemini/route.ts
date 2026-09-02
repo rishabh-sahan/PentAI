@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model, apiKey: apiKeyFromBody, imageDataUrl } = await req.json();
+    const { messages, model, apiKey: apiKeyFromBody, attachments } = await req.json();
     const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';
     if (!apiKey) return new Response(JSON.stringify({ error: 'Missing Gemini API key. Add your own key in Settings.' }), { status: 400 });
     const allowed = new Set(['gemini-2.5-flash', 'gemini-2.5-pro']);
@@ -27,17 +27,34 @@ export async function POST(req: NextRequest) {
       parts: [{ text: typeof m?.content === 'string' ? m.content : String(m?.content ?? '') }],
     }));
 
-    // If an image data URL is provided, attach it as inline_data to the last user message
-    if (imageDataUrl && contents.length > 0) {
+    /*
+      Attach binaries to the last user turn. Gemini reads both images and PDFs
+      natively via inline_data, so no local extraction is needed — the file is
+      passed through as base64 with its own mime type.
+    */
+    type InAttachment = { name?: unknown; mime?: unknown; kind?: unknown; dataUrl?: unknown };
+    const binaries = (Array.isArray(attachments) ? (attachments as InAttachment[]) : []).filter(
+      (a) => (a?.kind === 'image' || a?.kind === 'pdf') && typeof a?.dataUrl === 'string'
+    );
+
+    if (binaries.length > 0 && contents.length > 0) {
       for (let i = contents.length - 1; i >= 0; i--) {
-        if (contents[i].role === 'user') {
+        if (contents[i].role !== 'user') continue;
+        for (const a of binaries) {
           try {
-            const [meta, base64] = String(imageDataUrl).split(',');
-            const mt = /data:(.*?);base64/.exec(meta || '')?.[1] || 'image/png';
+            const [meta, base64] = String(a.dataUrl).split(',');
+            if (!base64) continue;
+            const declared = typeof a.mime === 'string' ? a.mime : '';
+            const mt =
+              /data:(.*?);base64/.exec(meta || '')?.[1] ||
+              declared ||
+              (a.kind === 'pdf' ? 'application/pdf' : 'image/png');
             contents[i].parts.push({ inline_data: { mime_type: mt, data: base64 } });
-          } catch {}
-          break;
+          } catch {
+            /* skip a file we can't decode rather than failing the whole turn */
+          }
         }
+        break;
       }
     }
 

@@ -1,60 +1,58 @@
-"use client"
+import { KeyRound, ListChecks, MessagesSquare } from "lucide-react"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { KeyRound, MessageSquarePlus, MousePointerClick, PanelsTopLeft } from "lucide-react"
-
-const steps = [
+const STEPS = [
   {
-    title: "Sign in",
-    description: "Start from the homepage and land in a persistent dashboard session.",
-    icon: MousePointerClick,
-  },
-  {
-    title: "Add keys",
-    description: "Paste Gemini and OpenRouter keys into the settings modal when needed.",
     icon: KeyRound,
+    step: "01",
+    title: "Paste a key",
+    body: "Grab a free API key from OpenRouter, Google or Sarvam and paste it into Settings. It stays in your browser — we never see it.",
   },
   {
-    title: "Choose models",
-    description: "Pick up to five models from grouped free, paid, and Gemini sections.",
-    icon: PanelsTopLeft,
+    icon: ListChecks,
+    step: "02",
+    title: "Pick your models",
+    body: "Browse every model each provider offers, filtered by provider, and tick up to five. Swap them any time without losing your chat.",
   },
   {
-    title: "Compare answers",
-    description: "Ask once, review every model answer, then copy the best result.",
-    icon: MessageSquarePlus,
+    icon: MessagesSquare,
+    step: "03",
+    title: "Ask once, read across",
+    body: "Type your question. All five answer at the same time, in neat columns — so the best answer is easy to spot.",
   },
 ]
 
 export function HowItWorksSection() {
   return (
-    <section id="workflow" className="border-y border-border bg-card/35">
-      <div className="mx-auto w-full max-w-[1320px] px-5 py-16 md:py-24">
-        <div className="max-w-2xl">
-          <div className="text-sm font-semibold uppercase tracking-wide text-primary">Workflow</div>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            From login to better answers in four moves.
+    <section id="how-it-works" className="border-b border-border">
+      <div className="mx-auto w-full max-w-6xl px-6 py-20 md:py-28">
+        <div data-reveal className="mx-auto max-w-2xl text-center">
+          <p className="text-base font-semibold uppercase tracking-[0.12em] text-primary md:text-lg">How it works</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            Up and running in about a minute.
           </h2>
+          <p className="mx-auto mt-4 max-w-lg text-base text-muted-foreground">
+            No setup, no install, no credit card. Three steps and you&apos;re comparing.
+          </p>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-4">
-          {steps.map((step, index) => {
-            const Icon = step.icon
-            return (
-              <Card key={step.title} className="rounded-lg border-border/70 bg-background/70 py-0 shadow-sm">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <span className="text-sm font-semibold text-muted-foreground">0{index + 1}</span>
-                  </div>
-                  <h3 className="mt-5 font-semibold">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.description}</p>
-                </CardContent>
-              </Card>
-            )
-          })}
+        <div className="mt-12 grid gap-5 md:mt-16 md:grid-cols-3">
+          {STEPS.map((item, i) => (
+            <div
+              key={item.step}
+              data-reveal
+              data-reveal-delay={i * 90}
+              className="hover-lift rounded-xl border border-border bg-card p-6 hover:border-primary/35 md:p-7"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <item.icon className="h-5 w-5 text-primary" />
+                </div>
+                <span className="font-mono text-xs text-muted-foreground">{item.step}</span>
+              </div>
+              <h3 className="mt-5 text-lg font-medium text-foreground">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>

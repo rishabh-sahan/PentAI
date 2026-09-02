@@ -1,73 +1,124 @@
-"use client";
-import { useEffect, useState } from 'react';
-import { useLocalStorage } from '@/lib/useLocalStorage';
-import { ApiKeys } from '@/lib/types';
+"use client"
 
-export default function Settings() {
-  const [open, setOpen] = useState(false);
-  const [keys, setKeys] = useLocalStorage<ApiKeys>('pentai:keys', {});
-  const [gemini, setGemini] = useState(keys.gemini || '');
-  const [openrouter, setOpenrouter] = useState(keys.openrouter || '');
+import { useEffect, useState } from "react"
+import { ExternalLink } from "lucide-react"
+
+import { useLocalStorage } from "@/lib/useLocalStorage"
+import { ApiKeys } from "@/lib/types"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+const KEY_FIELDS = [
+  {
+    id: "openrouter" as const,
+    label: "OpenRouter",
+    placeholder: "sk-or-…",
+    help: "One key unlocks every free and paid OpenRouter model.",
+    href: "https://openrouter.ai/settings/keys",
+  },
+  {
+    id: "gemini" as const,
+    label: "Gemini",
+    placeholder: "AIza…",
+    help: "Required for Gemini models and image input.",
+    href: "https://aistudio.google.com/app/apikey",
+  },
+  {
+    id: "sarvam" as const,
+    label: "Sarvam",
+    placeholder: "sk_…",
+    help: "Sarvam's own models plus the open-weight models they host.",
+    href: "https://indus.sarvam.ai/key-management",
+  },
+]
+
+export default function Settings({ trigger = true }: { trigger?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [keys, setKeys] = useLocalStorage<ApiKeys>("pentai:keys", {})
+  const [draft, setDraft] = useState<ApiKeys>(keys)
+
+  // Re-sync the draft whenever the dialog opens, so it never shows stale input.
+  useEffect(() => {
+    if (open) setDraft(keys)
+  }, [open, keys])
+
+  useEffect(() => {
+    const handler = () => setOpen(true)
+    window.addEventListener("open-settings", handler)
+    return () => window.removeEventListener("open-settings", handler)
+  }, [])
 
   const save = () => {
-    const next = { gemini: gemini.trim() || undefined, openrouter: openrouter.trim() || undefined };
-    setKeys(next);
-    setOpen(false);
-  };
-
-  // Allow programmatic open from anywhere (e.g., rate-limit CTA)
-  useEffect(() => {
-    const handler = () => setOpen(true);
-    window.addEventListener('open-settings', handler as EventListener);
-    return () => window.removeEventListener('open-settings', handler as EventListener);
-  }, []);
+    setKeys({
+      gemini: draft.gemini?.trim() || undefined,
+      openrouter: draft.openrouter?.trim() || undefined,
+      sarvam: draft.sarvam?.trim() || undefined,
+    })
+    setOpen(false)
+  }
 
   return (
-    <div>
-      <button onClick={() => setOpen(true)} className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-card/80 text-foreground">Settings</button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div className="surface-panel relative mx-3 w-full max-w-lg rounded-lg border bg-card text-foreground p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">API Keys</h2>
-              <button onClick={() => setOpen(false)} className="text-sm opacity-75 hover:opacity-100">Close</button>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">Keys are stored locally in your browser via localStorage and sent only with your requests. Do not hardcode keys in code.</p>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm">Gemini API Key</label>
-              <a
-                href="https://aistudio.google.com/app/u/5/apikey?pli=1"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs px-2.5 py-1 rounded bg-primary text-primary-foreground border border-border hover:brightness-95"
-              >
-                Get API key
-              </a>
-            </div>
-            <input value={gemini} onChange={(e) => setGemini(e.target.value)} placeholder="AIza..." className="w-full bg-card border border-border text-foreground placeholder:text-muted-foreground rounded px-3 py-2 mb-3" />
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm">OpenRouter API Key</label>
-              <a
-                href="https://openrouter.ai/sign-in?redirect_url=https%3A%2F%2Fopenrouter.ai%2Fsettings%2Fkeys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs px-2.5 py-1 rounded bg-primary text-primary-foreground border border-border hover:brightness-95"
-              >
-                Get API key
-              </a>
-            </div>
-            <input value={openrouter} onChange={(e) => setOpenrouter(e.target.value)} placeholder="sk-or-..." className="w-full bg-card border border-border text-foreground placeholder:text-muted-foreground rounded px-3 py-2" />
-            <div className="flex gap-2 justify-end mt-4">
-              <button onClick={() => setOpen(false)} className="px-3 py-1.5 rounded bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Close</button>
-              <button onClick={save} className="px-3 py-1.5 rounded bg-primary text-primary-foreground hover:brightness-95">Save</button>
-            </div>
-          </div>
-        </div>
+    <>
+      {trigger && (
+        <Button variant="outline" size="sm" className="h-8" onClick={() => setOpen(true)}>
+          Settings
+        </Button>
       )}
-    </div>
-  );
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>API keys</DialogTitle>
+            <DialogDescription>
+              Stored in this browser only and sent with your own requests. Both are free to create.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {KEY_FIELDS.map((field) => (
+              <div key={field.id}>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label htmlFor={field.id} className="text-sm font-medium text-foreground">
+                    {field.label}
+                  </label>
+                  <a
+                    href={field.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Get a key
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                <input
+                  id={field.id}
+                  type="password"
+                  value={draft[field.id] ?? ""}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                  placeholder={field.placeholder}
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring/30"
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">{field.help}</p>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={save}>Save keys</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
 }

@@ -1,49 +1,38 @@
-'use client';
+"use client"
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSupabase } from '@/lib/supabaseClient';
-import { Loader2 } from 'lucide-react';
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
+
+import { getSupabase } from "@/lib/supabaseClient"
 
 export default function AuthCallback() {
-  const router = useRouter();
+  const router = useRouter()
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
+    const run = async () => {
       try {
-  // Handle the OAuth callback
-  const supabase = getSupabase();
-  const { data, error } = await supabase.auth.getSession();
-        
+        const { data, error } = await getSupabase().auth.getSession()
         if (error) {
-          console.error('Auth callback error:', error);
-          router.push('/?error=auth_failed');
-          return;
+          console.error("Auth callback error:", error)
+          router.push("/?error=auth_failed")
+          return
         }
-
-        if (data.session) {
-          // Successfully authenticated, redirect to dashboard or home
-          router.push('/dashboard');
-        } else {
-          // No session, redirect to home
-          router.push('/');
-        }
+        router.push(data.session ? "/dashboard" : "/")
       } catch (error) {
-        console.error('Unexpected error during auth callback:', error);
-        router.push('/?error=auth_failed');
+        console.error("Unexpected error during auth callback:", error)
+        router.push("/?error=auth_failed")
       }
-    };
-
-    handleAuthCallback();
-  }, [router]);
+    }
+    void run()
+  }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-        <h2 className="text-xl font-semibold mb-2">Completing login...</h2>
-        <p className="text-muted-foreground">Please wait while we complete your authentication.</p>
+        <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+        <p className="mt-4 text-sm text-muted-foreground">Signing you in…</p>
       </div>
     </div>
-  );
+  )
 }

@@ -16,9 +16,9 @@ export default function MarkdownLite({ text }: Props) {
   const blocks = splitFencedCodeBlocks(text);
 
   return (
-    <div className="text-foreground leading-relaxed whitespace-pre-wrap">
+    <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground">
       {blocks.map((b, i) => b.type === "code" ? (
-        <pre key={i} className="my-2 rounded-md bg-muted border border-border p-3 overflow-x-auto text-xs text-foreground">
+        <pre key={i} className="my-2 overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono text-xs">
           <code>{b.content}</code>
         </pre>
       ) : (
@@ -69,19 +69,14 @@ function renderInline(input: string): React.ReactNode[] {
       withBold.forEach((piece, i) => {
         if (typeof piece !== "string") { withItalics.push(piece); return; }
         const italics = splitAndWrap(piece, /(?:\*([^*]+)\*|_([^_]+)_)/g, (m2, ii) => (
-          <em key={`i-${idx}-${i}-${ii}`} className="italic text-foreground/90">{m2}</em>
+          <em key={`i-${idx}-${i}-${ii}`} className="italic">{m2}</em>
         ));
-        // After italics, highlight standalone word FREE in emerald
         italics.forEach((part, j) => {
-          if (typeof part !== 'string') { withItalics.push(part); return; }
-          const chunks = part.split(/(\bFREE\b)/gi);
-          chunks.forEach((ch, k) => {
-            if (/^\bFREE\b$/i.test(ch)) {
-              withItalics.push(<span key={`free-${idx}-${i}-${j}-${k}`} className="text-emerald-600 dark:text-emerald-300 font-semibold">FREE</span>);
-            } else if (ch) {
-              withItalics.push(<React.Fragment key={`t-${idx}-${i}-${j}-${k}`}>{ch}</React.Fragment>);
-            }
-          });
+          withItalics.push(
+            typeof part === "string"
+              ? <React.Fragment key={`t-${idx}-${i}-${j}`}>{part}</React.Fragment>
+              : part
+          );
         });
       });
       out.push(<React.Fragment key={`t-${idx}`}>{withItalics}</React.Fragment>);

@@ -1,925 +1,683 @@
-"use client";
-import { useMemo, useState, useEffect, useCallback, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Plus, Star, Check, EllipsisVertical, Pin, PinOff, Trash2, Edit } from "lucide-react";
-import Settings from "@/components/Settings";
-import { useLocalStorage } from "@/lib/useLocalStorage";
-import {
-  MODEL_CATALOG,
-  isModelFree,
-  isOpenRouterFreeModel,
-  isOpenRouterPaidModel,
-} from "@/lib/models";
-import { AiModel, ChatMessage, ApiKeys, ChatThread } from "@/lib/types";
-import { callGemini, callOpenRouter, fetchOpenRouterLiveModels, type OpenRouterLiveModel } from "@/lib/client";
-import { AiInput } from "@/components/AIChatBox";
-import MarkdownLite from "@/components/MarkdownLite";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import ThemeToggler from "@/components/ThemeToggler";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+"use client"
 
-const normalizeModelId = (id: string) => id.trim().toLowerCase();
-const makeLiveModelUiId = (id: string) =>
-  `openrouter-live-${normalizeModelId(id)}`
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Check, Copy, Loader2, PanelLeft, Plus, SlidersHorizontal, X } from "lucide-react"
+
+import Settings from "@/components/Settings"
+import MarkdownLite from "@/components/MarkdownLite"
+import ThemeToggler from "@/components/ThemeToggler"
+import { AiInput } from "@/components/AIChatBox"
+import { ChatSidebar } from "@/components/dashboard/ChatSidebar"
+import { MAX_SELECTED, ModelPicker } from "@/components/dashboard/ModelPicker"
+import { Button } from "@/components/ui/button"
+import { useLocalStorage } from "@/lib/useLocalStorage"
+import { MODEL_CATALOG } from "@/lib/models"
+import { AiModel, ApiKeys, ChatMessage, ChatThread, Provider } from "@/lib/types"
+import {
+  callGemini,
+  callOpenRouter,
+  callSarvam,
+  fetchOpenRouterLiveModels,
+  fetchSarvamLiveModels,
+  type OpenRouterLiveModel,
+  type SarvamLiveModel,
+} from "@/lib/client"
+import { binaryFor, buildPromptWithText, type Attachment } from "@/lib/attachments"
+import { useAuth } from "@/context/AuthContext"
+import { cn } from "@/lib/utils"
+
+const normalizeModelId = (id: string) => id.trim().toLowerCase()
+
+const makeUiId = (prefix: string, id: string) =>
+  `${prefix}-${normalizeModelId(id)}`
     .replace(/[^a-z0-9-]/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-|-$/g, "")
 
-export default function Home() {
-  const [selectedIds, setSelectedIds] = useLocalStorage<string[]>(
-    "pentai:selected-models",
-    [
-      "gemini-2.5-flash",
-      "llama-3.3-70b-instruct",
-      "qwen-2.5-72b-instruct",
-      "openai-gpt-oss-20b-free",
-      "glm-4.5-air",
-    ]
-  );
-  const [keys] = useLocalStorage<ApiKeys>("pentai:keys", {});
-  const [threads, setThreads] = useLocalStorage<ChatThread[]>("pentai:threads", []);
-  const [activeId, setActiveId] = useLocalStorage<string | null>("pentai:active-thread", null);
-  const [sidebarOpen, setSidebarOpen] = useLocalStorage<boolean>("pentai:sidebar-open", true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [modelsModalOpen, setModelsModalOpen] = useState(false);
-  const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
-  const [renameInputValue, setRenameInputValue] = useState<string>('');
-  const [liveOpenRouterModels, setLiveOpenRouterModels] = useState<OpenRouterLiveModel[] | null>(null);
-  const [liveOpenRouterLoading, setLiveOpenRouterLoading] = useState(false);
-  const [liveOpenRouterError, setLiveOpenRouterError] = useState<string | null>(null);
-  const [liveSyncedAt, setLiveSyncedAt] = useState<number | null>(null);
-  const activeThread = useMemo(() => threads.find(t => t.id === activeId) || null, [threads, activeId]);
-  const messages = useMemo(() => activeThread?.messages ?? [], [activeThread]);
-  const [loadingIds, setLoadingIds] = useState<string[]>([]);
+const PROVIDER_LABEL: Record<Provider, string> = {
+  openrouter: "OpenRouter",
+  gemini: "Gemini",
+  sarvam: "Sarvam",
+}
 
-  const liveOpenRouterFreeCatalog = useMemo<AiModel[]>(() => {
-    if (!liveOpenRouterModels) return [];
-    return liveOpenRouterModels
+export default function DashboardPage() {
+  const { session, loading } = useAuth()
+  const router = useRouter()
+
+  const [selectedIds, setSelectedIds] = useLocalStorage<string[]>("pentai:selected-models", [
+    "gemini-2.5-flash",
+  ])
+  const [defaultSeeded, setDefaultSeeded] = useLocalStorage<boolean>(
+    "pentai:default-openrouter-seeded",
+    false
+  )
+  const [keys] = useLocalStorage<ApiKeys>("pentai:keys", {})
+  const [threads, setThreads] = useLocalStorage<ChatThread[]>("pentai:threads", [])
+  const [activeId, setActiveId] = useLocalStorage<string | null>("pentai:active-thread", null)
+
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  const [loadingIds, setLoadingIds] = useState<string[]>([])
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  const [liveModels, setLiveModels] = useState<OpenRouterLiveModel[] | null>(null)
+  const [sarvamModels, setSarvamModels] = useState<SarvamLiveModel[] | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
+
+  const activeThread = useMemo(
+    () => threads.find((t) => t.id === activeId) ?? null,
+    [threads, activeId]
+  )
+  const messages = useMemo(() => activeThread?.messages ?? [], [activeThread])
+
+  /* ---------------------------------------------------------------- catalog */
+
+  const liveFreeCatalog = useMemo<AiModel[]>(() => {
+    if (!liveModels) return []
+    return liveModels
       .filter((m) => m.isFree && normalizeModelId(m.id) !== "openrouter/free")
       .map((m) => ({
-        id: makeLiveModelUiId(m.id),
-        label: /\(free\)/i.test(m.name) ? m.name : `${m.name} (free)`,
+        id: makeUiId("openrouter-live", m.id),
+        label: m.name.replace(/\s*\(free\)\s*$/i, ""),
         provider: "openrouter" as const,
         model: m.id,
         free: true,
-      }));
-  }, [liveOpenRouterModels]);
+      }))
+  }, [liveModels])
 
-  const mergedCatalog = useMemo<AiModel[]>(() => {
-    const byModel = new Map<string, AiModel>();
-    for (const m of MODEL_CATALOG) {
-      byModel.set(normalizeModelId(m.model), m);
-    }
-    for (const m of liveOpenRouterFreeCatalog) {
-      const key = normalizeModelId(m.model);
-      if (!byModel.has(key)) {
-        byModel.set(key, m);
+  const sarvamCatalog = useMemo<AiModel[]>(() => {
+    if (!sarvamModels) return []
+    // Sarvam's own models are the reason to hold a Sarvam key, so they lead.
+    const ordered = [...sarvamModels].sort((a, b) => {
+      const aOwn = a.ownedBy === "sarvam" ? 0 : 1
+      const bOwn = b.ownedBy === "sarvam" ? 0 : 1
+      return aOwn - bOwn || a.name.localeCompare(b.name)
+    })
+    return ordered.map((m) => {
+      const isOwn = m.ownedBy === "sarvam"
+      return {
+        id: makeUiId("sarvam", m.id),
+        label: m.name,
+        provider: "sarvam" as const,
+        model: m.id,
+        good: isOwn,
+        group: isOwn ? "Sarvam's own models" : "Open-weight models hosted by Sarvam",
+        beta: Boolean(m.beta),
+        betaNote: m.beta
+          ? "Sarvam's open-weight endpoint is in beta — your key needs access granted before this model can answer."
+          : undefined,
       }
+    })
+  }, [sarvamModels])
+
+  const catalog = useMemo<AiModel[]>(
+    () => [...liveFreeCatalog, ...MODEL_CATALOG, ...sarvamCatalog],
+    [liveFreeCatalog, sarvamCatalog]
+  )
+
+  const freeModels = useMemo(() => catalog.filter((m) => m.free), [catalog])
+  const selectedModels = useMemo(
+    () => catalog.filter((m) => selectedIds.includes(m.id)),
+    [catalog, selectedIds]
+  )
+
+  const missingKeys = useMemo<Provider[]>(() => {
+    const missing: Provider[] = []
+    if (!keys.openrouter?.trim()) missing.push("openrouter")
+    if (!keys.gemini?.trim()) missing.push("gemini")
+    if (!keys.sarvam?.trim()) missing.push("sarvam")
+    return missing
+  }, [keys])
+
+  const syncModels = useCallback(async () => {
+    setSyncing(true)
+    // Both catalogs are public; one failing shouldn't blank the other.
+    const [orResult, sarvamResult] = await Promise.allSettled([
+      fetchOpenRouterLiveModels({ apiKey: keys.openrouter }),
+      fetchSarvamLiveModels(),
+    ])
+
+    const errors: string[] = []
+
+    if (orResult.status === "fulfilled" && !orResult.value?.error) {
+      setLiveModels(Array.isArray(orResult.value?.models) ? orResult.value.models : [])
+    } else {
+      setLiveModels(null)
+      const reason =
+        orResult.status === "rejected"
+          ? String(orResult.reason)
+          : String(orResult.value?.error ?? "unknown")
+      errors.push(`OpenRouter: ${reason}`)
     }
-    return Array.from(byModel.values());
-  }, [liveOpenRouterFreeCatalog]);
 
-  const liveOpenRouterIdSet = useMemo(
-    () => (liveOpenRouterModels ? new Set(liveOpenRouterModels.map((m) => normalizeModelId(m.id))) : null),
-    [liveOpenRouterModels]
-  );
-  const availableModelCatalog = useMemo(
-    () => mergedCatalog.filter((m) => m.provider !== 'openrouter' || !liveOpenRouterIdSet || liveOpenRouterIdSet.has(normalizeModelId(m.model))),
-    [mergedCatalog, liveOpenRouterIdSet]
-  );
-  const selectedModels = useMemo(() => availableModelCatalog.filter(m => selectedIds.includes(m.id)), [availableModelCatalog, selectedIds]);
-  const openRouterFreeModels = useMemo(() => availableModelCatalog.filter(isOpenRouterFreeModel), [availableModelCatalog]);
-  const openRouterPaidModels = useMemo(() => availableModelCatalog.filter(isOpenRouterPaidModel), [availableModelCatalog]);
-  const geminiModels = useMemo(() => availableModelCatalog.filter((m) => m.provider === 'gemini'), [availableModelCatalog]);
-  const liveFreeCount = useMemo(
-    () => liveOpenRouterModels?.filter((m) => m.isFree && normalizeModelId(m.id) !== "openrouter/free").length ?? 0,
-    [liveOpenRouterModels]
-  );
-  const hiddenOpenRouterCount = useMemo(() => {
-    if (!liveOpenRouterIdSet) return 0;
-    const totalOpenRouter = mergedCatalog.filter((m) => m.provider === 'openrouter').length;
-    const availableOpenRouter = availableModelCatalog.filter((m) => m.provider === 'openrouter').length;
-    return Math.max(0, totalOpenRouter - availableOpenRouter);
-  }, [availableModelCatalog, liveOpenRouterIdSet, mergedCatalog]);
-  const anyLoading = loadingIds.length > 0;
-  const [copiedAllIdx, setCopiedAllIdx] = useState<number | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [firstNoteDismissed, setFirstNoteDismissed] = useLocalStorage<boolean>('pentai:first-visit-note-dismissed', false);
-  const showFirstVisitNote = !firstNoteDismissed && (!keys?.openrouter || !keys?.gemini);
+    if (sarvamResult.status === "fulfilled" && !sarvamResult.value?.error) {
+      setSarvamModels(Array.isArray(sarvamResult.value?.models) ? sarvamResult.value.models : [])
+    } else {
+      setSarvamModels(null)
+      const reason =
+        sarvamResult.status === "rejected"
+          ? String(sarvamResult.reason)
+          : String(sarvamResult.value?.error ?? "unknown")
+      errors.push(`Sarvam: ${reason}`)
+    }
 
-  const { session, loading } = useAuth();
-  const router = useRouter();
-  const dashboardSidebarInputStyle: CSSProperties & Record<"--dashboard-sidebar-offset", string> = {
-    '--dashboard-sidebar-offset': sidebarOpen ? 'calc(16rem + 1.5rem)' : 'calc(3.5rem + 1.5rem)',
-  };
+    setSyncError(errors.length ? errors.join(" · ") : null)
+    setSyncing(false)
+  }, [keys.openrouter])
 
-  const isUncensoredModel = (m: AiModel) => /uncensored/i.test(m.label) || /venice/i.test(m.model);
+  /* ----------------------------------------------------------------- effects */
 
-  const syncOpenRouterModels = useCallback(async () => {
-    setLiveOpenRouterLoading(true);
-    try {
-      const data = await fetchOpenRouterLiveModels({ apiKey: keys.openrouter });
-      if (typeof data?.error === "string" && data.error) {
-        throw new Error(data.error);
+  useEffect(() => {
+    if (!loading && !session) router.push("/?login=1")
+  }, [session, loading, router])
+
+  useEffect(() => {
+    void syncModels()
+  }, [syncModels])
+
+  // Drop selections whose model has disappeared from a provider's catalog.
+  // Only prunes once both syncs have resolved, so a slow fetch can't wipe a
+  // valid selection mid-load.
+  useEffect(() => {
+    if (!liveModels || !sarvamModels) return
+    const allowed = new Set(catalog.map((m) => m.id))
+    setSelectedIds((prev) => prev.filter((id) => allowed.has(id)))
+  }, [catalog, liveModels, sarvamModels, setSelectedIds])
+
+  // One-time: fill the default selection from models that are actually live and
+  // free right now, so the first run is never seeded with stale ids.
+  useEffect(() => {
+    if (defaultSeeded || !liveModels || freeModels.length === 0) return
+    setSelectedIds((prev) => {
+      const next = [...prev]
+      for (const model of freeModels) {
+        if (next.length >= MAX_SELECTED) break
+        if (!next.includes(model.id)) next.push(model.id)
       }
-      const models = Array.isArray(data?.models) ? data.models : [];
-      setLiveOpenRouterModels(models);
-      setLiveSyncedAt(typeof data?.fetchedAt === 'number' ? data.fetchedAt : Date.now());
-      setLiveOpenRouterError(null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setLiveOpenRouterError(msg || 'Failed to fetch live models');
-      setLiveOpenRouterModels(null);
-    } finally {
-      setLiveOpenRouterLoading(false);
-    }
-  }, [keys.openrouter]);
+      return next
+    })
+    setDefaultSeeded(true)
+  }, [defaultSeeded, liveModels, freeModels, setSelectedIds, setDefaultSeeded])
 
-  // Move this useMemo higher in the component, before any conditional returns
-  const pairs = useMemo(() => {
-    const rows: { user: ChatMessage; answers: ChatMessage[] }[] = [];
-    let currentUser: ChatMessage | null = null;
+  /* ------------------------------------------------------------------ turns */
+
+  const rows = useMemo(() => {
+    const out: { user: ChatMessage; answers: ChatMessage[] }[] = []
     for (const m of messages) {
-      if (m.role === "user") {
-        currentUser = m;
-        rows.push({ user: m, answers: [] });
-      } else if (m.role === "assistant" && currentUser) {
-        rows[rows.length - 1]?.answers.push(m);
-      }
+      if (m.role === "user") out.push({ user: m, answers: [] })
+      else if (m.role === "assistant" && out.length) out[out.length - 1].answers.push(m)
     }
-    return rows;
-  }, [messages]);
-  
-  // Then place this useEffect after all other hooks
-  useEffect(() => {
-    if (!loading && !session) {
-      router.push('/?login=1');
-    }
-  }, [session, loading, router]);
+    return out
+  }, [messages])
 
-  useEffect(() => {
-    void syncOpenRouterModels();
-  }, [syncOpenRouterModels]);
+  /* ----------------------------------------------------------------- actions */
 
-  useEffect(() => {
-    if (!liveOpenRouterIdSet) return;
-    const allowed = new Set(availableModelCatalog.map((m) => m.id));
-    setSelectedIds((prev) => prev.filter((id) => allowed.has(id)));
-  }, [availableModelCatalog, liveOpenRouterIdSet, setSelectedIds]);
-  
-  if (loading || !session) {
-    return <div className="min-h-screen w-full bg-background relative text-foreground flex items-center justify-center">Loading...</div>;
-  }
-
-  // Copy helper with fallback when navigator.clipboard is unavailable
-  const copyToClipboard = async (text: string) => {
+  const copy = async (text: string, key: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(text)
     } catch {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      } catch {
-        // ignore
-      }
+      const ta = document.createElement("textarea")
+      ta.value = text
+      ta.style.position = "fixed"
+      ta.style.left = "-9999px"
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      document.body.removeChild(ta)
     }
-  };
-
-  const toggle = (id: string) => {
-    setSelectedIds(prev => {
-      if (prev.includes(id)) return prev.filter(x => x !== id);
-      const valid = new Set(availableModelCatalog.map(m => m.id));
-      const currentValidCount = prev.filter(x => valid.has(x)).length;
-      if (currentValidCount >= 5) return prev;
-      return [...prev, id];
-    });
-  };
-
-  const handleRename = (id: string) => {
-    if (renameInputValue.trim() === '') return;
-    setThreads(prev => prev.map(t => t.id === id ? { ...t, title: renameInputValue.trim() } : t));
-    setRenamingThreadId(null);
-    setRenameInputValue('');
-  };
-
-  const handlePinToggle = (id: string) => {
-    setThreads(prev => {
-      const threadToToggle = prev.find(t => t.id === id);
-      if (!threadToToggle) return prev;
-
-      const updatedThread = { ...threadToToggle, pinned: !threadToToggle.pinned };
-
-      if (updatedThread.pinned) {
-        // If pinning, move to the top of the list
-        return [updatedThread, ...prev.filter(t => t.id !== id)];
-      } else {
-        // If unpinning, remove from pinned, then sort by createdAt
-        const unpinnedThreads = prev.filter(t => t.id !== id && !t.pinned);
-        const pinnedThreads = prev.filter(t => t.id !== id && t.pinned);
-        return [...pinnedThreads, updatedThread, ...unpinnedThreads.sort((a, b) => b.createdAt - a.createdAt)];
-      }
-    });
-  };
-
-  const handleDelete = (id: string) => {
-    setThreads(prev => prev.filter(t => t.id !== id));
-    if (activeId === id) {
-      setActiveId(null);
-    }
-  };
-
-  function ensureThread() {
-    if (activeThread) return activeThread;
-    const t: ChatThread = { id: crypto.randomUUID(), title: "New Chat", messages: [], createdAt: Date.now() };
-    setThreads(prev => [t, ...prev]);
-    setActiveId(t.id);
-    return t;
+    setCopiedKey(key)
+    window.setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500)
   }
 
-  async function send(text: string, imageDataUrl?: string) {
-    const prompt = text.trim();
-    if (!prompt) return;
-    if (selectedModels.length === 0) return alert("Select at least one model.");
-    const hasOpenRouterKey = Boolean(keys.openrouter?.trim());
-    const hasGeminiKey = Boolean(keys.gemini?.trim());
-    const runnableModelIds = selectedModels
-      .filter((m) => {
-        if (m.provider === 'openrouter') return hasOpenRouterKey;
-        if (m.provider === 'gemini') return hasGeminiKey;
-        return true;
+  const newChat = () => {
+    const thread: ChatThread = {
+      id: crypto.randomUUID(),
+      title: "New chat",
+      messages: [],
+      createdAt: Date.now(),
+    }
+    setThreads((prev) => [thread, ...prev])
+    setActiveId(thread.id)
+    setSidebarOpen(false)
+  }
+
+  const toggleModel = (id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.length >= MAX_SELECTED) return prev
+      return [...prev, id]
+    })
+  }
+
+  const commitRename = (id: string) => {
+    const title = renameValue.trim()
+    if (title) setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)))
+    setRenamingId(null)
+    setRenameValue("")
+  }
+
+  const togglePin = (id: string) => {
+    setThreads((prev) => {
+      const target = prev.find((t) => t.id === id)
+      if (!target) return prev
+      const updated = { ...target, pinned: !target.pinned }
+      const others = prev.filter((t) => t.id !== id)
+      return updated.pinned
+        ? [updated, ...others]
+        : [...others.filter((t) => t.pinned), updated, ...others.filter((t) => !t.pinned)]
+    })
+  }
+
+  const deleteThread = (id: string) => {
+    setThreads((prev) => prev.filter((t) => t.id !== id))
+    if (activeId === id) setActiveId(null)
+  }
+
+  async function send(text: string, attachments: Attachment[] = []) {
+    const typed = text.trim()
+    if ((!typed && attachments.length === 0) || selectedModels.length === 0) return
+
+    // Text files are inlined into the prompt so that even text-only models see
+    // them. Binaries are passed through per-provider below.
+    const prompt = buildPromptWithText(
+      typed || "Please review the attached file(s).",
+      attachments
+    )
+    const attachmentSummary = attachments.length
+      ? ` [${attachments.map((a) => a.name).join(", ")}]`
+      : ""
+
+    const keyFor: Record<Provider, string | undefined> = {
+      openrouter: keys.openrouter?.trim() || undefined,
+      gemini: keys.gemini?.trim() || undefined,
+      sarvam: keys.sarvam?.trim() || undefined,
+    }
+    const runnable = selectedModels.filter((m) => Boolean(keyFor[m.provider]))
+
+    if (runnable.length === 0) {
+      window.dispatchEvent(new Event("open-settings"))
+      return
+    }
+
+    let thread = activeThread
+    if (!thread) {
+      thread = {
+        id: crypto.randomUUID(),
+        title: (typed || "Attached files").slice(0, 48),
+        messages: [],
+        createdAt: Date.now(),
+      }
+      setThreads((prev) => [thread as ChatThread, ...prev])
+      setActiveId(thread.id)
+    }
+    const threadId = thread.id
+
+    // What the models receive (files inlined) vs what the transcript shows.
+    const userMsgForModel: ChatMessage = { role: "user", content: prompt, ts: Date.now() }
+    const userMsgForDisplay: ChatMessage = {
+      role: "user",
+      content: `${typed || "Please review the attached file(s)."}${attachmentSummary}`,
+      ts: userMsgForModel.ts,
+    }
+    const history = [...(thread.messages ?? []), userMsgForModel]
+
+    setThreads((prev) =>
+      prev.map((t) =>
+        t.id === threadId
+          ? {
+              ...t,
+              title:
+                t.title === "New chat"
+                  ? (typed || "Attached files").slice(0, 48)
+                  : t.title,
+              messages: [...(t.messages ?? []), userMsgForDisplay],
+            }
+          : t
+      )
+    )
+
+    const appendAnswer = (content: string, modelId: string) => {
+      const answer: ChatMessage = { role: "assistant", content, modelId, ts: Date.now() }
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId ? { ...t, messages: [...(t.messages ?? history), answer] } : t
+        )
+      )
+    }
+
+    setLoadingIds(runnable.map((m) => m.id))
+
+    await Promise.allSettled(
+      selectedModels.map(async (model) => {
+        const apiKey = keyFor[model.provider]
+        if (!apiKey) {
+          appendAnswer(
+            `Add your ${PROVIDER_LABEL[model.provider]} API key in Settings to use this model.`,
+            model.id
+          )
+          return
+        }
+
+        // Text files are already inside the prompt; only binaries vary by provider.
+        const { unsupported } = binaryFor(model.provider, attachments)
+        const caveat = unsupported.length
+          ? `\n\n_Note: ${PROVIDER_LABEL[model.provider]} can't read ${unsupported
+              .map((a) => a.name)
+              .join(", ")}, so ${unsupported.length > 1 ? "they were" : "it was"} not sent._`
+          : ""
+
+        try {
+          const res =
+            model.provider === "gemini"
+              ? await callGemini({ apiKey, model: model.model, messages: history, attachments })
+              : model.provider === "sarvam"
+                ? await callSarvam({ apiKey, model: model.model, messages: history })
+                : await callOpenRouter({
+                    apiKey,
+                    model: model.model,
+                    messages: history,
+                    attachments,
+                  })
+
+          const r = res as { text?: unknown; error?: unknown } | null
+          const text =
+            (typeof r?.text === "string" ? r.text : undefined) ??
+            (typeof r?.error === "string" ? r.error : undefined) ??
+            "No response."
+          appendAnswer(`${String(text).trim()}${caveat}`, model.id)
+        } catch (err) {
+          appendAnswer(`Error: ${err instanceof Error ? err.message : String(err)}`, model.id)
+        } finally {
+          setLoadingIds((prev) => prev.filter((x) => x !== model.id))
+        }
       })
-      .map((m) => m.id);
-
-    if (runnableModelIds.length === 0) {
-      alert('Please add your own API key(s) in Settings to use these models.');
-      window.dispatchEvent(new Event('open-settings'));
-      return;
-    }
-    const userMsg: ChatMessage = { role: "user", content: prompt, ts: Date.now() };
-    const thread = ensureThread();
-    const nextHistory = [...(thread.messages ?? []), userMsg];
-    // set thread messages and optional title
-    setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, title: thread.title === "New Chat" ? prompt.slice(0, 40) : t.title, messages: nextHistory } : t));
-    // input reset handled within AiInput component
-
-    // fire all selected models in parallel
-    setLoadingIds(runnableModelIds);
-    await Promise.allSettled(selectedModels.map(async (m: AiModel) => {
-      try {
-        if (m.provider === 'gemini' && !hasGeminiKey) {
-          const asst: ChatMessage = {
-            role: "assistant",
-            content: `[${m.label}] Skipped: Gemini API key is missing. Add it in Settings or deselect this model.`.trim(),
-            modelId: m.id,
-            ts: Date.now(),
-          };
-          setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, messages: [...(t.messages ?? nextHistory), asst] } : t));
-          return;
-        }
-
-        if (m.provider === 'openrouter' && !hasOpenRouterKey) {
-          const asst: ChatMessage = {
-            role: "assistant",
-            content: `[${m.label}] Skipped: OpenRouter API key is missing. Add it in Settings or deselect this model.`.trim(),
-            modelId: m.id,
-            ts: Date.now(),
-          };
-          setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, messages: [...(t.messages ?? nextHistory), asst] } : t));
-          return;
-        }
-
-        let res: unknown;
-        if (m.provider === "gemini") {
-          res = await callGemini({ apiKey: keys.gemini || undefined, model: m.model, messages: nextHistory, imageDataUrl });
-        } else {
-          res = await callOpenRouter({ apiKey: keys.openrouter || undefined, model: m.model, messages: nextHistory });
-        }
-        const text = (() => {
-          const r = res as { text?: unknown; error?: unknown } | null | undefined;
-          const t = r && typeof r === 'object' ? (typeof r.text === 'string' ? r.text : undefined) : undefined;
-          const e = r && typeof r === 'object' ? (typeof r.error === 'string' ? r.error : undefined) : undefined;
-          return t || e || "No response";
-        })();
-        const asst: ChatMessage = { role: "assistant", content: String(text).trim(), modelId: m.id, ts: Date.now() };
-        // Append to current thread messages to accumulate answers from multiple models
-        setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, messages: [...(t.messages ?? nextHistory), asst] } : t));
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        const asst: ChatMessage = { role: "assistant", content: `[${m.label}] Error: ${msg}`.trim(), modelId: m.id, ts: Date.now() };
-        setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, messages: [...(t.messages ?? nextHistory), asst] } : t));
-      } finally {
-        setLoadingIds(prev => prev.filter(x => x !== m.id));
-      }
-    }));
+    )
   }
 
-  // group assistant messages by turn for simple compare view
+  /* ------------------------------------------------------------------ render */
+
+  if (loading || !session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  const needsKeys = missingKeys.length === 3
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${Math.max(selectedModels.length, 1)}, minmax(280px, 1fr))`,
+  }
+
+  const sidebarProps = {
+    threads,
+    activeId,
+    renamingId,
+    renameValue,
+    onSelect: (id: string) => {
+      setActiveId(id)
+      setSidebarOpen(false)
+    },
+    onNewChat: newChat,
+    onStartRename: (thread: ChatThread) => {
+      setRenamingId(thread.id)
+      setRenameValue(thread.title || "")
+    },
+    onRenameChange: setRenameValue,
+    onCommitRename: commitRename,
+    onCancelRename: () => {
+      setRenamingId(null)
+      setRenameValue("")
+    },
+    onTogglePin: togglePin,
+    onDelete: deleteThread,
+  }
+
   return (
-    <div className="dashboard-root min-h-screen w-full relative text-foreground">
-      <div className="relative z-10 px-3 lg:px-4 py-4 lg:py-6">
-        <div className="flex gap-3 lg:gap-4">
-          {/* Sidebar */}
-          {/* Desktop sidebar */}
-          <aside className={`surface-panel relative hidden lg:flex shrink-0 h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)] rounded-lg border border-sidebar-border bg-sidebar/95 p-3 flex-col transition-[width] duration-300 ${sidebarOpen ? 'w-64' : 'w-14'}`}>
-            {/* Collapse/Expand toggle */}
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      {/* Sidebar — persistent on desktop */}
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-sidebar lg:block">
+        <ChatSidebar {...sidebarProps} />
+      </aside>
+
+      {/* Sidebar — drawer on mobile */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-72 border-r border-border bg-sidebar">
             <button
-              aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute -right-3 top-5 z-10 h-6 w-6 rounded-full bg-sidebar-accent border border-sidebar-border flex items-center justify-center shadow-sm hover:bg-accent"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close menu"
+              className="absolute right-3 top-4 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+              <X className="h-4 w-4" />
             </button>
-
-            <div className={`flex items-center justify-between mb-2 ${sidebarOpen ? '' : 'opacity-0 pointer-events-none'}`}>
-              <Link href="/" className="flex items-center gap-2 group" title="Go to PentAI home">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 transition-transform group-hover:scale-110">
-                  <path d="M12 2L22 9.27L18.18 21H5.82L2 9.27L12 2Z" fill="url(#pentLogoGrad)" stroke="currentColor" strokeWidth="1.2" className="text-primary/60" />
-                  <defs><linearGradient id="pentLogoGrad" x1="2" y1="2" x2="22" y2="21"><stop stopColor="hsl(var(--primary))" /><stop offset="1" stopColor="hsl(var(--primary)/0.5)" /></linearGradient></defs>
-                </svg>
-                <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">PentAI</span>
-              </Link>
-
-          {/* First-visit API keys modal */}
-          {showFirstVisitNote && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div
-                className="absolute inset-0 bg-background/60 backdrop-blur-sm"
-                onClick={() => setFirstNoteDismissed(true)}
-              />
-              <div className="surface-panel relative mx-3 w-full max-w-md sm:max-w-lg rounded-lg border bg-card p-5">
-                <div className="flex items-start gap-3 mb-2">
-                  <h3 className="text-base font-semibold tracking-wide">Some models need API keys</h3>
-                </div>
-                <div className="text-sm text-muted-foreground space-y-2">
-                  <p>You can generate API keys for free.</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>One OpenRouter key works across many models.</li>
-                    <li>Gemini requires its own key.</li>
-                  </ul>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
-                  <button
-                    onClick={() => window.dispatchEvent(new Event('open-settings'))}
-                    className="text-sm px-3 py-2 rounded-md bg-primary text-primary-foreground border border-primary/30 hover:bg-primary/90"
-                  >
-                    Get API key for free
-                  </button>
-                  <button
-                    onClick={() => setFirstNoteDismissed(true)}
-                    className="text-sm px-3 py-2 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-            {/* First-visit API keys notice is now a centered modal shown below */}
-            </div>
-
-            {/* When collapsed, show only a big plus button centered */}
-            {sidebarOpen ? (
-              <>
-                <button
-                  onClick={() => {
-                    const t: ChatThread = { id: crypto.randomUUID(), title: 'New Chat', messages: [], createdAt: Date.now() };
-                    setThreads(prev => [t, ...prev]);
-                    setActiveId(t.id);
-                  }}
-                  className="mb-3 text-sm px-3 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                >
-                  + New Chat
-                </button>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Chats</div>
-                <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-                  {threads.length === 0 && <div className="text-xs opacity-60">No chats yet</div>}
-                  {threads.map(t => (
-                    <div key={t.id} className="group relative flex items-center">
-                      {renamingThreadId === t.id ? (
-                        <input
-                          autoFocus
-                          value={renameInputValue}
-                          onChange={(e) => setRenameInputValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleRename(t.id);
-                            } else if (e.key === 'Escape') {
-                              setRenamingThreadId(null);
-                              setRenameInputValue('');
-                            }
-                          }}
-                          onBlur={() => handleRename(t.id)}
-                          className="w-full bg-card border border-border rounded-md text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      ) : (
-                        <div 
-                          onClick={() => setActiveId(t.id)} 
-                          className={`w-full text-left px-2 py-2 rounded-md text-sm border flex items-center justify-between cursor-pointer transition-colors ${t.id === activeId ? 'bg-primary/10 border-primary/40 text-foreground' : 'bg-card/70 border-border hover:bg-accent'}`}
-                        >
-                          <span className="truncate flex items-center gap-1">
-                            {t.title || 'Untitled'}
-                          </span>
-                          <div className="flex items-center">
-                            {t.pinned && <Pin size={12} className="shrink-0 text-muted-foreground mr-1" />}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button className="w-7 h-7 flex items-center justify-center rounded-full">
-                                  <EllipsisVertical size={14} />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40 bg-card border-border text-foreground">
-                                <DropdownMenuItem onClick={() => {
-                                  setRenamingThreadId(t.id);
-                                  setRenameInputValue(t.title || '');
-                                }} className="cursor-pointer">
-                                  <Edit size={14} className="mr-2" /> Rename
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handlePinToggle(t.id)} className="cursor-pointer">
-                                  {t.pinned ? (
-                                    <><PinOff size={14} className="mr-2" /> Unpin</>
-                                  ) : (
-                                    <><Pin size={14} className="mr-2" /> Pin</>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-border" />
-                                <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-destructive focus:text-destructive">
-                                  <Trash2 size={14} className="mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center pt-6">
-                {/* New chat button */}
-                <button
-                  title="New Chat"
-                  onClick={() => {
-                    const t: ChatThread = { id: crypto.randomUUID(), title: 'New Chat', messages: [], createdAt: Date.now() };
-                    setThreads(prev => [t, ...prev]);
-                    setActiveId(t.id);
-                  }}
-                  className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center mb-4 mx-auto shrink-0"
-                >
-                  <Plus size={14} />
-                </button>
-
-                {/* Mini chat boxes list */}
-                <div className="flex-1 overflow-y-auto w-full flex flex-col items-center gap-2 pt-1 pb-2">
-                  {threads.map(t => {
-                    const isActive = t.id === activeId;
-                    const letter = (t.title || 'Untitled').trim()[0]?.toUpperCase() || 'N';
-                    return (
-                      <DropdownMenu key={t.id}>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            title={t.title || 'Untitled'}
-                            onClick={() => setActiveId(t.id)}
-                            className={`h-6 w-6 aspect-square rounded-full flex items-center justify-center transition-colors focus-visible:outline-none mx-auto shrink-0 
-                              ${isActive ? 'bg-primary/15 ring-1 ring-primary ring-offset-1 ring-offset-background' : 'bg-card hover:bg-accent'}`}
-                          >
-                            <span className="text-[10px] font-semibold leading-none flex items-center gap-0.5">
-                              {t.pinned && <Pin size={8} className="shrink-0 text-muted-foreground" />}
-                              {letter}
-                            </span>
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 bg-card border-border text-foreground">
-                          <DropdownMenuItem onClick={() => {
-                            setRenamingThreadId(t.id);
-                            setRenameInputValue(t.title || '');
-                            setSidebarOpen(true); // Open sidebar to show input field
-                          }} className="cursor-pointer">
-                            <Edit size={14} className="mr-2" /> Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handlePinToggle(t.id)} className="cursor-pointer">
-                            {t.pinned ? (
-                              <><PinOff size={14} className="mr-2" /> Unpin</>
-                            ) : (
-                              <><Pin size={14} className="mr-2" /> Pin</>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-border" />
-                          <DropdownMenuItem onClick={() => handleDelete(t.id)} className="cursor-pointer text-destructive focus:text-destructive">
-                            <Trash2 size={14} className="mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </aside>
-
-          {/* Mobile sidebar drawer */}
-          {mobileSidebarOpen && (
-            <div className="lg:hidden fixed inset-0 z-40">
-              <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setMobileSidebarOpen(false)} />
-              <div className="surface-panel absolute left-0 top-0 h-full w-72 bg-card border-r border-border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Link href="/" className="flex items-center gap-2 group" title="Go to PentAI home">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 transition-transform group-hover:scale-110">
-                      <path d="M12 2L22 9.27L18.18 21H5.82L2 9.27L12 2Z" fill="url(#pentLogoGradMobile)" stroke="currentColor" strokeWidth="1.2" className="text-primary/60" />
-                      <defs><linearGradient id="pentLogoGradMobile" x1="2" y1="2" x2="22" y2="21"><stop stopColor="hsl(var(--primary))" /><stop offset="1" stopColor="hsl(var(--primary)/0.5)" /></linearGradient></defs>
-                    </svg>
-                    <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">PentAI</span>
-                  </Link>
-                  <button onClick={() => setMobileSidebarOpen(false)} className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Close</button>
-                </div>
-                <button
-                  onClick={() => {
-                    const t: ChatThread = { id: crypto.randomUUID(), title: 'New Chat', messages: [], createdAt: Date.now() };
-                    setThreads(prev => [t, ...prev]);
-                    setActiveId(t.id);
-                    setMobileSidebarOpen(false);
-                  }}
-                  className="mb-3 text-sm px-3 py-2 w-full rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  + New Chat
-                </button>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Chats</div>
-                <div className="h-[70vh] overflow-y-auto space-y-1 pr-1">
-                  {threads.length === 0 && <div className="text-xs opacity-60">No chats yet</div>}
-                  {threads.map(t => (
-                    <button key={t.id} onClick={() => { setActiveId(t.id); setMobileSidebarOpen(false); }} className={`w-full text-left px-2 py-2 rounded-md text-sm border transition-colors ${t.id === activeId ? 'bg-primary/10 border-primary/40' : 'bg-card border-border hover:bg-accent'}`}>
-                      {t.title || 'Untitled'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-          {/* Main content */}
-          <div className="flex-1 min-w-0 flex flex-col h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)] overflow-hidden">
-            {/* Top bar */}
-          <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90">Menu</button>
-                <Link href="/" className="flex items-center gap-2 group" title="Go to PentAI home">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="shrink-0 transition-transform group-hover:scale-110">
-                    <path d="M12 2L22 9.27L18.18 21H5.82L2 9.27L12 2Z" fill="url(#pentLogoGradTop)" stroke="currentColor" strokeWidth="1.2" className="text-primary/60" />
-                    <defs><linearGradient id="pentLogoGradTop" x1="2" y1="2" x2="22" y2="21"><stop stopColor="hsl(var(--primary))" /><stop offset="1" stopColor="hsl(var(--primary)/0.5)" /></linearGradient></defs>
-                  </svg>
-                  <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">PentAI</h1>
-                </Link>
-              </div>
-              <div className="flex items-center gap-2">
-                <ThemeToggler />
-              </div>
-            </div>
-
-            {/* Selected models row + Change button */}
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              {selectedModels.map((m) => {
-                const isFree = isModelFree(m);
-                const isUncensored = isUncensoredModel(m);
-                return (
-                <button
-                  key={m.id}
-                  onClick={() => toggle(m.id)}
-                  className={`h-9 px-3 text-xs rounded-md text-foreground border flex items-center gap-2 bg-card hover:bg-accent transition-colors ${
-                    m.good ? 'border-amber-300/40' : isFree ? 'border-emerald-300/40' : 'border-border'
-                  }`}
-                  title="Click to toggle"
-                >
-                  {m.good && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/30">
-                      <Star size={12} className="shrink-0" />
-                      <span className="hidden sm:inline">Pro</span>
-                    </span>
-                  )}
-                  {isFree && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25">
-                      <span className="h-2 w-2 rounded-full bg-emerald-300" />
-                      <span className="hidden sm:inline">Free</span>
-                    </span>
-                  )}
-                  {isUncensored && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/25">
-                      <span className="h-2 w-2 rounded-full bg-rose-200" />
-                      <span className="hidden sm:inline">Uncensored</span>
-                    </span>
-                  )}
-                  <span className="truncate max-w-[180px]">{m.label}</span>
-                  <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-primary/30">
-                    <span className="h-3 w-3 rounded-full bg-primary translate-x-3.5" />
-                  </span>
-                </button>
-              );})}
-              {selectedModels.length === 0 && (
-                <span className="text-xs text-muted-foreground">No models selected</span>
-              )}
-              <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={() => setModelsModalOpen(true)}
-                  className="text-xs px-2.5 py-1 rounded border border-border bg-card hover:bg-card/80"
-                >
-                  Change models
-                </button>
-                <Settings />
-              </div>
-            </div>
-
-            {modelsModalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setModelsModalOpen(false)} />
-                <div className="surface-panel relative w-full max-w-2xl mx-3 rounded-lg border bg-card p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-base font-semibold tracking-wide">Select up to 5 models</h3>
-                    <button onClick={() => setModelsModalOpen(false)} className="text-xs px-2 py-1 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/90">Close</button>
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-3">Selected: {selectedModels.length}/5</div>
-                  <div className="text-[11px] text-muted-foreground mb-3">
-                    {liveOpenRouterLoading
-                      ? 'Syncing OpenRouter live models...'
-                      : liveOpenRouterError
-                        ? `Live sync unavailable (${liveOpenRouterError}). Showing fallback catalog.`
-                        : `Live sync active${liveSyncedAt ? ` at ${new Date(liveSyncedAt).toLocaleTimeString()}` : ''}. ${liveFreeCount} live free model(s) found. ${hiddenOpenRouterCount} unavailable OpenRouter model(s) hidden.`}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <button
-                      onClick={() => setSelectedIds(openRouterFreeModels.slice(0, 5).map((m) => m.id))}
-                      className="text-xs px-2.5 py-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
-                    >
-                      Use OpenRouter Free models (max 5)
-                    </button>
-                    <button
-                      onClick={() => void syncOpenRouterModels()}
-                      disabled={liveOpenRouterLoading}
-                      className="text-xs px-2.5 py-1 rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 disabled:opacity-60"
-                    >
-                      {liveOpenRouterLoading ? 'Refreshing...' : 'Refresh live models'}
-                    </button>
-                    <button
-                      onClick={() => setSelectedIds([])}
-                      className="text-xs px-2.5 py-1 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                    >
-                      Clear selection
-                    </button>
-                  </div>
-                  <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                    {[
-                      {
-                        key: 'openrouter-free',
-                        title: 'OpenRouter Free Models',
-                        description: 'No per-model charge on OpenRouter free tier. Requires your OpenRouter API key.',
-                        items: openRouterFreeModels,
-                      },
-                      {
-                        key: 'openrouter-paid',
-                        title: 'OpenRouter Paid Models',
-                        description: 'Uses your OpenRouter account credits/billing.',
-                        items: openRouterPaidModels,
-                      },
-                      {
-                        key: 'gemini',
-                        title: 'Gemini Models',
-                        description: 'Requires your Gemini API key.',
-                        items: geminiModels,
-                      },
-                    ]
-                      .filter((section) => section.items.length > 0)
-                      .map((section) => (
-                        <div key={section.key} className="space-y-2">
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">{section.title}</div>
-                          <div className="text-[11px] text-muted-foreground">{section.description}</div>
-                          <div className="flex flex-wrap gap-2">
-                            {section.items.map((m) => {
-                              const free = isOpenRouterFreeModel(m);
-                              const paid = isOpenRouterPaidModel(m);
-                              const unc = isUncensoredModel(m);
-                              const selected = selectedIds.includes(m.id);
-                              const disabled = !selected && selectedModels.length >= 5;
-                              return (
-                                <button
-                                  key={m.id}
-                                  onClick={() => !disabled && toggle(m.id)}
-                                  className={`h-9 px-3 text-xs rounded-md border transition-colors flex items-center justify-between gap-3 min-w-[260px] ${
-                                    selected
-                                      ? `${m.good ? 'border-amber-400/50' : free ? 'border-emerald-500/50' : paid ? 'border-sky-500/50' : 'border-primary/30'} bg-primary/10`
-                                      : disabled
-                                        ? 'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-60'
-                                        : `${m.good ? 'border-amber-400/30' : free ? 'border-emerald-500/30' : paid ? 'border-sky-500/30' : 'border-border'} bg-card hover:bg-accent`
-                                  }`}
-                                  title={selected ? 'Click to unselect' : disabled ? 'Limit reached' : 'Click to select'}
-                                >
-                                  <span className="pr-1 inline-flex items-center gap-1.5 min-w-0">
-                                    {m.good && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/30">
-                                        <Star size={12} className="shrink-0" />
-                                        <span className="hidden sm:inline">Pro</span>
-                                      </span>
-                                    )}
-                                    {free && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25">
-                                        <span className="h-2 w-2 rounded-full bg-emerald-300" />
-                                        <span className="hidden sm:inline">Free</span>
-                                      </span>
-                                    )}
-                                    {paid && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 ring-1 ring-sky-500/25">
-                                        <span className="h-2 w-2 rounded-full bg-sky-200" />
-                                        <span className="hidden sm:inline">Paid</span>
-                                      </span>
-                                    )}
-                                    {unc && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/25">
-                                        <span className="h-2 w-2 rounded-full bg-rose-200" />
-                                        <span className="hidden sm:inline">Uncensored</span>
-                                      </span>
-                                    )}
-                                    <span className="truncate max-w-[150px] sm:max-w-[200px]">{m.label}</span>
-                                  </span>
-                                  <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${selected ? 'bg-primary/30' : 'bg-muted'}`}>
-                                    <span className={`h-3 w-3 rounded-full transition-transform ${selected ? 'bg-primary translate-x-3.5' : 'bg-muted-foreground translate-x-0.5'}`} />
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Messages area */}
-            <div className="surface-panel rounded-lg border bg-card px-3 pt-5 overflow-x-auto flex-1 overflow-y-auto pb-28 text-foreground">
-              {selectedModels.length === 0 ? (
-                <div className="p-4 text-muted-foreground">Select up to 5 models to compare.</div>
-              ) : (
-                <div className="min-w-full space-y-3">
-                  {/* Header row: model labels */}
-                  <div
-                    className="grid gap-3 items-center overflow-visible mt-3 pt-1"
-                    style={{ gridTemplateColumns: `repeat(${selectedModels.length}, minmax(260px, 1fr))` }}
-                  >
-                    {selectedModels.map((m) => {
-                      const isFree = isModelFree(m);
-                      return (
-                      <div key={m.id} className={`px-1 py-5 min-h-[60px] border-b flex items-center justify-between overflow-visible ${m.good ? 'border-amber-400/40' : 'border-border'}`}>
-                        <div className={`text-[13px] leading-normal font-medium pr-2 inline-flex items-center gap-1.5 min-w-0 ${m.good || isFree ? 'opacity-100 text-foreground' : 'opacity-90'}`}>
-                          {m.good && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0 rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/30 text-[11px] h-6 self-center">
-                              <Star size={11} />
-                              <span className="hidden sm:inline">Pro</span>
-                            </span>
-                          )}
-                          {isFree && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/25 text-[11px] h-6 self-center">
-                              <span className="h-2 w-2 rounded-full bg-emerald-300" />
-                              <span className="hidden sm:inline">Free</span>
-                            </span>
-                          )}
-                          <span className="truncate">{m.label}</span>
-                        </div>
-                        {loadingIds.includes(m.id) && <span className="text-[11px] text-primary">Thinking...</span>}
-                      </div>
-                    );})}
-                  </div>
-
-                  {/* Rows: one per user turn, with a cell per model aligned */}
-                  {pairs.map((row, i) => (
-                    <div key={i} className="space-y-2">
-                      {/* Optional: show the user prompt spanning all columns */}
-                      <div className="text-sm text-muted-foreground flex items-center justify-between gap-2">
-                        <div>
-                          <span className="opacity-60">You:</span> {row.user.content}
-                        </div>
-                        <button
-                          onClick={() => {
-                            const all = selectedModels.map((m) => {
-                              const ans = row.answers.find((a) => a.modelId === m.id);
-                              const header = m.label;
-                              const body = ans?.content ?? '';
-                              return `## ${header}\n${body}`;
-                            }).join('\n\n');
-                            copyToClipboard(all);
-                            setCopiedAllIdx(i);
-                            window.setTimeout(() => setCopiedAllIdx(null), 1200);
-                          }}
-                          className={`text-[11px] px-2.5 py-1 rounded-md border shadow-sm transition-all ${
-                            copiedAllIdx === i
-                              ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300 scale-[1.02]'
-                              : 'bg-secondary border-border text-secondary-foreground hover:bg-secondary/80'
-                          }`}
-                          title="Copy all model responses for this prompt"
-                        >
-                          {copiedAllIdx === i ? (
-                            <span className="inline-flex items-center gap-1">
-                              <Check size={12} /> Copied
-                            </span>
-                          ) : (
-                            'Copy all'
-                          )}
-                        </button>
-                      </div>
-                      <div
-                        className="grid gap-3 items-stretch"
-                        style={{ gridTemplateColumns: `repeat(${selectedModels.length}, minmax(260px, 1fr))` }}
-                      >
-                        {selectedModels.map((m) => {
-                          const isFree = isModelFree(m);
-                          const ans = row.answers.find((a) => a.modelId === m.id);
-                          return (
-                            <div key={m.id} className="h-full">
-                              <div className={`group relative rounded-md p-3 h-full min-h-[160px] flex overflow-hidden ring-1 ${m.good ? 'bg-gradient-to-b from-amber-500/10 to-card ring-amber-400/30' : isFree ? 'bg-gradient-to-b from-emerald-500/10 to-card ring-emerald-500/30' : 'bg-card ring-border'}`}>
-                                {ans && (
-                                  <button
-                                    onClick={() => {
-                                      copyToClipboard(ans.content);
-                                      const key = `${i}:${m.id}`;
-                                      setCopiedKey(key);
-                                      window.setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 1200);
-                                    }}
-                                    className={`absolute top-2 right-2 z-10 text-[11px] px-2 py-1 rounded border whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all ${
-                                      copiedKey === `${i}:${m.id}`
-                                        ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300 scale-[1.02]'
-                                        : 'bg-secondary border-border text-secondary-foreground hover:bg-secondary/80'
-                                    }`}
-                                    title={`Copy ${m.label} response`}
-                                  >
-                                    {copiedKey === `${i}:${m.id}` ? (
-                                      <span className="inline-flex items-center gap-1">
-                                        <Check size={12} /> Copied
-                                      </span>
-                                    ) : (
-                                      'Copy'
-                                    )}
-                                  </button>
-                                )}
-                                <div className="text-sm leading-relaxed w-full pr-8">
-                                  {ans ? (
-                                    <>
-                                      <MarkdownLite text={ans.content} />
-                                      {(() => {
-                                        try {
-                                          const txt = String(ans.content || '');
-                                          // Show CTA for shared-key guidance (OpenRouter or Gemini)
-                                          const show = /add your own\s+(?:openrouter|gemini)\s+api key/i.test(txt);
-                                          return show;
-                                        } catch { return false; }
-                                      })() && (
-                                        <div className="mt-2">
-                                          <button
-                                            onClick={() => window.dispatchEvent(new Event('open-settings'))}
-                                            className="text-xs px-2.5 py-1 rounded-md bg-primary text-primary-foreground border border-primary/30 hover:bg-primary/90"
-                                          >
-                                            Add keys
-                                          </button>
-                                        </div>
-                                      )}
-                                    </>
-                                  ) : loadingIds.includes(m.id) ? (
-                                            <div className="w-full self-stretch animate-pulse space-y-2">
-                                                <div className="h-2.5 w-1/3 rounded bg-primary/30" />
-                                                <div className="h-2 rounded bg-muted" />
-                                                <div className="h-2 rounded bg-muted w-5/6" />
-                                                <div className="h-2 rounded bg-muted w-2/3" />
-                                              </div>
-                                  ) : (
-                                    <span className="opacity-40">No reply yet</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Fixed bottom input line */}
-            <div className="fixed bottom-0 left-0 right-0 z-20 pt-2 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t from-background/95 via-background/75 to-transparent">
-              <div
-                className="w-full px-3 lg:px-4 lg:pl-[var(--dashboard-sidebar-offset)]"
-                style={dashboardSidebarInputStyle}
-              >
-                <AiInput onSubmit={(text, imageDataUrl) => { send(text, imageDataUrl); }} loading={anyLoading} />
-              </div>
-            </div>
+            <ChatSidebar {...sidebarProps} />
           </div>
         </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Top bar */}
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+
+          <h1 className="min-w-0 flex-1 truncate text-sm font-medium">
+            {activeThread?.title ?? "New chat"}
+          </h1>
+
+          <Button variant="outline" size="sm" className="h-8" onClick={() => setPickerOpen(true)}>
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Models</span>
+            <span className="ml-0.5 tabular-nums text-muted-foreground">
+              {selectedModels.length}
+            </span>
+          </Button>
+          <Settings />
+          <ThemeToggler />
+        </header>
+
+        {/* Selected model chips */}
+        {selectedModels.length > 0 && (
+          <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border px-4 py-2">
+            {selectedModels.map((model) => (
+              <button
+                key={model.id}
+                onClick={() => toggleModel(model.id)}
+                title="Remove from comparison"
+                className="group inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card py-1 pl-3 pr-2 text-xs text-foreground transition-colors hover:bg-accent"
+              >
+                <span className="max-w-[180px] truncate">{model.label}</span>
+                <X className="h-3 w-3 text-muted-foreground transition-colors group-hover:text-foreground" />
+              </button>
+            ))}
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground transition-colors hover:border-solid hover:bg-accent hover:text-foreground"
+              aria-label="Add model"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Conversation */}
+        <div className="min-h-0 flex-1 overflow-auto">
+          {needsKeys ? (
+            <EmptyState
+              title="Add an API key to begin"
+              body="PentAI uses your own keys — they stay in this browser and are free to create. One OpenRouter key unlocks every free model."
+              action={
+                <Button onClick={() => window.dispatchEvent(new Event("open-settings"))}>
+                  Add API keys
+                </Button>
+              }
+            />
+          ) : selectedModels.length === 0 ? (
+            <EmptyState
+              title="No models selected"
+              body={`Pick up to ${MAX_SELECTED} models and every prompt you send will go to all of them at once.`}
+              action={<Button onClick={() => setPickerOpen(true)}>Select models</Button>}
+            />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              title="Ask anything"
+              body="Your prompt goes to every selected model in parallel. Their answers land side by side below."
+            />
+          ) : (
+            <div className="mx-auto w-full px-4 py-6">
+              <div className="min-w-full space-y-10">
+                {rows.map((row, i) => (
+                  <div key={i}>
+                    {/* Prompt */}
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <p className="text-[15px] font-medium leading-relaxed text-foreground">
+                        {row.user.content}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 shrink-0 text-xs text-muted-foreground"
+                        onClick={() =>
+                          copy(
+                            selectedModels
+                              .map((m) => {
+                                const a = row.answers.find((x) => x.modelId === m.id)
+                                return `## ${m.label}\n${a?.content ?? ""}`
+                              })
+                              .join("\n\n"),
+                            `all-${i}`
+                          )
+                        }
+                      >
+                        {copiedKey === `all-${i}` ? (
+                          <>
+                            <Check className="h-3 w-3" /> Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" /> Copy all
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Answers */}
+                    <div className="grid gap-3" style={gridStyle}>
+                      {selectedModels.map((model) => {
+                        const answer = row.answers.find((a) => a.modelId === model.id)
+                        const isLoading = !answer && loadingIds.includes(model.id)
+                        const key = `${i}:${model.id}`
+
+                        return (
+                          <div
+                            key={model.id}
+                            className="group relative flex min-h-[160px] flex-col rounded-lg border border-border bg-card"
+                          >
+                            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                              <span className="truncate text-xs font-medium text-foreground">
+                                {model.label}
+                              </span>
+                              {answer && (
+                                <button
+                                  onClick={() => copy(answer.content, key)}
+                                  aria-label="Copy answer"
+                                  className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                                >
+                                  {copiedKey === key ? (
+                                    <Check className="h-3 w-3" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex-1 p-3 text-sm leading-relaxed">
+                              {answer ? (
+                                <MarkdownLite text={answer.content} />
+                              ) : isLoading ? (
+                                <div className="space-y-2 pt-1">
+                                  {["w-2/3", "w-full", "w-5/6", "w-1/2"].map((w, n) => (
+                                    <div
+                                      key={n}
+                                      className={cn("h-2.5 animate-pulse rounded-full bg-muted", w)}
+                                      style={{ animationDelay: `${n * 120}ms` }}
+                                    />
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No response</span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Composer */}
+        <div className="shrink-0 border-t border-border bg-background px-4 py-3">
+          <AiInput onSubmit={send} loading={loadingIds.length > 0} />
+        </div>
+      </div>
+
+      <ModelPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        catalog={catalog}
+        selectedIds={selectedIds}
+        onToggle={toggleModel}
+        onClear={() => setSelectedIds([])}
+        onRefresh={() => void syncModels()}
+        syncing={syncing}
+        syncError={syncError}
+        missingKeys={missingKeys}
+        onOpenSettings={() => {
+          setPickerOpen(false)
+          window.dispatchEvent(new Event("open-settings"))
+        }}
+      />
+    </div>
+  )
+}
+
+function EmptyState({
+  title,
+  body,
+  action,
+}: {
+  title: string
+  body: string
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="flex h-full items-center justify-center px-6 py-16">
+      <div className="max-w-sm text-center">
+        <h2 className="text-base font-medium text-foreground">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        {action && <div className="mt-5 flex justify-center">{action}</div>}
       </div>
     </div>
-  );
+  )
 }

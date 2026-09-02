@@ -14,11 +14,6 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -35,86 +30,114 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-gold-soft: var(--gold-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Light theme colors — Luxury Ivory & Gold */
+/*
+  Indigo-violet primary, warm ivory neutrals, amber-gold accent.
+
+  The premium feel comes from the neutrals being *tinted*, not from the accent
+  being loud: ivory instead of white, indigo-charcoal instead of black. Cool
+  indigo carries interaction; warm gold carries "free"/highlight, so the two
+  never compete for the same job.
+*/
 :root {
   --radius: 0.625rem;
-  /* Surfaces */
-  --background: oklch(0.985 0.005 100); /* soft ivory */
-  --foreground: oklch(0.18 0.02 260); /* rich graphite text */
-  --card: oklch(0.97 0.006 100); /* porcelain */
-  --card-foreground: oklch(0.22 0.02 260);
-  --popover: oklch(0.98 0.004 100);
-  --popover-foreground: oklch(0.2 0.02 260);
-  /* Brand accents */
-  --primary: oklch(0.78 0.12 85); /* luxury gold */
-  --primary-foreground: oklch(0.15 0.02 260);
-  --secondary: oklch(0.94 0.01 100); /* champagne tint */
-  --secondary-foreground: oklch(0.3 0.02 260);
-  --muted: oklch(0.93 0.008 260);
-  --muted-foreground: oklch(0.45 0.02 260);
-  --accent: oklch(0.52 0.07 255); /* deep sapphire */
-  --accent-foreground: oklch(0.98 0.004 100);
-  --destructive: oklch(0.62 0.19 30);
-  /* System tokens */
-  --border: oklch(0.86 0.01 260);
-  --input: oklch(0.9 0.01 260);
-  --ring: oklch(0.68 0.07 255);
-  /* Charts (harmonized) */
-  --chart-1: oklch(0.72 0.15 85); /* gold */
-  --chart-2: oklch(0.58 0.12 184); /* teal */
-  --chart-3: oklch(0.5 0.09 257); /* sapphire */
-  --chart-4: oklch(0.84 0.14 95); /* light gold */
-  --chart-5: oklch(0.64 0.17 35); /* copper */
+
+  /* Surfaces — warm ivory page, pure-white cards lifting above it */
+  --background: oklch(0.985 0.004 85);
+  --foreground: oklch(0.19 0.025 278);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.025 278);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.025 278);
+
+  /* Indigo-violet */
+  --primary: oklch(0.48 0.19 285);
+  --primary-foreground: oklch(0.99 0.004 85);
+  --secondary: oklch(0.962 0.007 85);
+  --secondary-foreground: oklch(0.28 0.03 280);
+  --muted: oklch(0.964 0.006 85);
+  --muted-foreground: oklch(0.52 0.02 278);
+  --accent: oklch(0.955 0.012 285);
+  --accent-foreground: oklch(0.32 0.06 285);
+  --destructive: oklch(0.58 0.2 25);
+
+  /* Amber-gold — "free", highlights, pro marks */
+  --gold: oklch(0.72 0.14 72);
+  --gold-foreground: oklch(0.26 0.05 60);
+  --gold-soft: oklch(0.96 0.035 82);
+
+  /* Emerald — success only */
+  --success: oklch(0.58 0.13 158);
+  --success-soft: oklch(0.95 0.04 158);
+
+  --border: oklch(0.905 0.008 80);
+  --input: oklch(0.905 0.008 80);
+  --ring: oklch(0.48 0.19 285);
+
   /* Sidebar */
-  --sidebar: oklch(0.96 0.006 100);
-  --sidebar-foreground: oklch(0.22 0.02 260);
-  --sidebar-primary: oklch(0.78 0.12 85);
-  --sidebar-primary-foreground: oklch(0.15 0.02 260);
-  --sidebar-accent: oklch(0.92 0.01 100);
-  --sidebar-accent-foreground: oklch(0.28 0.02 260);
-  --sidebar-border: oklch(0.87 0.01 260);
-  --sidebar-ring: oklch(0.68 0.07 255);
+  --sidebar: oklch(0.975 0.006 85);
+  --sidebar-foreground: oklch(0.19 0.025 278);
+  --sidebar-primary: oklch(0.48 0.19 285);
+  --sidebar-primary-foreground: oklch(0.99 0.004 85);
+  --sidebar-accent: oklch(0.95 0.012 285);
+  --sidebar-accent-foreground: oklch(0.3 0.05 285);
+  --sidebar-border: oklch(0.905 0.008 80);
+  --sidebar-ring: oklch(0.48 0.19 285);
 }
 
-/* Dark theme colors */
 .dark {
-  --background: oklch(0.08 0.01 270);
-  --foreground: oklch(0.95 0.01 270);
-  --card: oklch(0.12 0.01 270);
-  --card-foreground: oklch(0.95 0.01 270);
-  --popover: oklch(0.12 0.01 270);
-  --popover-foreground: oklch(0.95 0.01 270);
-  --primary: oklch(0.7 0.15 40);
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: oklch(0.18 0.01 270);
-  --secondary-foreground: oklch(0.8 0.01 270);
-  --muted: oklch(0.18 0.01 270);
-  --muted-foreground: oklch(0.6 0.01 270);
-  --accent: oklch(0.25 0.03 270);
-  --accent-foreground: oklch(0.9 0.01 270);
-  --destructive: oklch(0.7 0.15 10);
-  --border: oklch(0.2 0.01 270);
-  --input: oklch(0.15 0.01 270);
-  --ring: oklch(0.4 0.01 270);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.15 0.01 270);
-  --sidebar-foreground: oklch(0.95 0.01 270);
-  --sidebar-primary: oklch(0.7 0.15 40);
-  --sidebar-primary-foreground: oklch(0.1 0 0);
-  --sidebar-accent: oklch(0.25 0.03 270);
-  --sidebar-accent-foreground: oklch(0.9 0.01 270);
-  --sidebar-border: oklch(0.25 0.01 270);
-  --sidebar-ring: oklch(0.45 0.01 270);
+  /* Deep indigo-charcoal, never pure black */
+  --background: oklch(0.16 0.018 280);
+  --foreground: oklch(0.97 0.008 285);
+  --card: oklch(0.205 0.021 281);
+  --card-foreground: oklch(0.97 0.008 285);
+  --popover: oklch(0.215 0.022 281);
+  --popover-foreground: oklch(0.97 0.008 285);
+
+  --primary: oklch(0.72 0.16 288);
+  --primary-foreground: oklch(0.16 0.03 282);
+  --secondary: oklch(0.26 0.022 282);
+  --secondary-foreground: oklch(0.95 0.01 285);
+  --muted: oklch(0.255 0.02 282);
+  --muted-foreground: oklch(0.71 0.018 285);
+  --accent: oklch(0.29 0.035 285);
+  --accent-foreground: oklch(0.96 0.01 285);
+  --destructive: oklch(0.66 0.19 25);
+
+  /*
+    In dark mode the pairing inverts: the soft surface is a deep, desaturated
+    olive and the text on it must be PALE gold. Reusing the light-mode dark
+    brown here gives near-zero contrast (L 0.2 text on L 0.3 ground).
+  */
+  --gold: oklch(0.82 0.12 80);
+  --gold-foreground: oklch(0.93 0.07 85);
+  --gold-soft: oklch(0.285 0.038 74);
+
+  --success: oklch(0.72 0.14 160);
+  --success-soft: oklch(0.28 0.05 160);
+
+  --border: oklch(0.3 0.022 282);
+  --input: oklch(0.3 0.022 282);
+  --ring: oklch(0.72 0.16 288);
+
+  --sidebar: oklch(0.185 0.02 280);
+  --sidebar-foreground: oklch(0.97 0.008 285);
+  --sidebar-primary: oklch(0.72 0.16 288);
+  --sidebar-primary-foreground: oklch(0.16 0.03 282);
+  --sidebar-accent: oklch(0.27 0.03 284);
+  --sidebar-accent-foreground: oklch(0.96 0.01 285);
+  --sidebar-border: oklch(0.3 0.022 282);
+  --sidebar-ring: oklch(0.72 0.16 288);
 }
 
 @layer base {
@@ -123,51 +146,131 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 {
+    letter-spacing: -0.022em;
   }
 }
 
-/* Themed scrollbars (applies to sidebar and all scroll areas) */
-/* Firefox */
+/* Scrollbars — tinted to the theme, never a focal point */
 * {
   scrollbar-width: thin;
-  scrollbar-color: oklch(0.5 0.01 270 / 0.35) oklch(0.15 0.01 270 / 0.06);
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 32%, transparent) transparent;
 }
-.dark * {
-  scrollbar-color: oklch(0.7 0.15 40 / 0.55) oklch(0.15 0.01 270 / 0.06); /* primary thumb on dark track */
-}
-
-/* WebKit (Chrome/Safari/Edge) */
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 *::-webkit-scrollbar-track {
-  background: oklch(0.15 0.01 270 / 0.06);
-  border-radius: 9999px;
+  background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, color-mix(in oklab, oklch(0.7 0.15 40) 60%, transparent), color-mix(in oklab, oklch(0.7 0.15 40) 30%, transparent));
+  background: color-mix(in oklab, var(--muted-foreground) 30%, transparent);
   border-radius: 9999px;
-  border: 2px solid oklch(0.1 0.02 270 / 0.4); /* dark inset border */
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, color-mix(in oklab, oklch(0.7 0.15 40) 75%, transparent), color-mix(in oklab, oklch(0.7 0.15 40) 45%, transparent));
+  background: color-mix(in oklab, var(--primary) 55%, transparent);
+  background-clip: content-box;
 }
 
-.dashboard-root {
-  color: var(--foreground);
-  background:
-    radial-gradient(circle at top left, color-mix(in oklab, var(--primary) 16%, transparent), transparent 32rem),
-    linear-gradient(180deg, color-mix(in oklab, var(--background) 92%, var(--card) 8%), var(--background));
+/* ---------------------------------------------------------------- motion */
+
+/*
+  Scroll reveal. Elements start shifted + transparent and are released by an
+  IntersectionObserver adding [data-visible]. Pure CSS, no animation library.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  [data-reveal][data-visible="true"] {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.surface-panel {
-  background: color-mix(in oklab, var(--card) 92%, transparent);
-  border-color: color-mix(in oklab, var(--border) 88%, transparent);
-  box-shadow: 0 18px 60px color-mix(in oklab, var(--foreground) 10%, transparent);
+/* Anything relying on reveal must still be visible without JS or with reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.dark .surface-panel {
-  background: color-mix(in oklab, var(--card) 78%, transparent);
-  box-shadow: 0 18px 70px color-mix(in oklab, black 34%, transparent);
+.hover-lift {
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hover-lift:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* Aurora wash behind the hero — subtle, theme-aware */
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.aurora::before,
+.aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+}
+.aurora::before {
+  width: 44rem;
+  height: 44rem;
+  top: -18rem;
+  left: -12rem;
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+.aurora::after {
+  width: 36rem;
+  height: 36rem;
+  top: -10rem;
+  right: -12rem;
+  background: color-mix(in oklab, var(--gold) 20%, transparent);
+}
+.dark .aurora::before {
+  background: color-mix(in oklab, var(--primary) 26%, transparent);
+}
+.dark .aurora::after {
+  background: color-mix(in oklab, var(--gold) 14%, transparent);
+}
+
+/* Marquee for the provider strip */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Typing caret for the hero demo */
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.caret {
+  animation: caret-blink 1s step-end infinite;
 }
