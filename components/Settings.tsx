@@ -5,7 +5,7 @@ import { ApiKeys } from '@/lib/types';
 
 export default function Settings() {
   const [open, setOpen] = useState(false);
-  const [keys, setKeys] = useLocalStorage<ApiKeys>('ai-fiesta:keys', {});
+  const [keys, setKeys] = useLocalStorage<ApiKeys>('pentai:keys', {});
   const [gemini, setGemini] = useState(keys.gemini || '');
   const [openrouter, setOpenrouter] = useState(keys.openrouter || '');
 

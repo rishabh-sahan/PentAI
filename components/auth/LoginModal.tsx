@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Github, Loader2 } from "lucide-react";
-import Image from "next/image";
 import { getSupabase } from '@/lib/supabaseClient';
 
 interface LoginModalProps {

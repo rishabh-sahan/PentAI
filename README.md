@@ -24,14 +24,11 @@ npm i
 ```
 
 ### 2. Configure Environment
-Create `.env.local` with the API keys you plan to use:
+Create `.env.local` with your Supabase project credentials (needed for login):
 
 ```
-# OpenRouter (recommended for most free models)
-OPENROUTER_API_KEY=your_openrouter_key_here
-
-# Gemini (for Gemini models and image input)
-GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_key_here
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### 3. Run Development Server
@@ -44,26 +41,32 @@ npm run dev
 
 | Variable | Description | Required For |
 |----------|-------------|--------------|
-| `OPENROUTER_API_KEY` | API key from [OpenRouter](https://openrouter.ai) | OpenRouter models |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | API key from Google AI Studio | Gemini models |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Login / OAuth |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (publishable) key | Login / OAuth |
 
-> **Note**: You can also provide API keys at runtime through the UI's Settings panel.
+> **Provider API keys are not environment variables.** PentAI is bring-your-own-key: you enter your
+> [OpenRouter](https://openrouter.ai) and [Gemini](https://aistudio.google.com/app/apikey) keys in the
+> app's Settings panel. They are stored in your browser's `localStorage` and sent only with your own
+> requests — the server never holds a key of its own.
 
 ## 📁 Project Structure
 
 ```
 app/
 ├── api/
-│   ├── openrouter/route.ts    # Normalizes responses across OpenRouter models
-│   ├── gemini/route.ts        # Gemini API integration
-│   └── gemini-pro/route.ts    # Gemini Pro API integration
-components/                    # UI components (chat box, model selector, etc.)
-lib/                          # Model catalog and client helpers
+│   ├── openrouter/route.ts         # Normalizes responses across OpenRouter models
+│   ├── openrouter/models/route.ts  # Live OpenRouter model catalog
+│   └── gemini/route.ts             # Gemini API integration (Flash and Pro)
+├── dashboard/page.tsx              # The multi-model compare workspace
+└── page.tsx                        # Landing page
+components/                         # UI components (chat box, settings, home sections)
+context/                            # Supabase auth provider
+lib/                                # Model catalog, client helpers, types
 ```
 
 ## 🧠 Notes on DeepSeek R1
 
-Pent-AI post-processes DeepSeek R1 outputs to remove reasoning tags and convert Markdown to plain text for improved readability while preserving all content integrity.
+PentAI post-processes DeepSeek R1 outputs to remove reasoning tags and convert Markdown to plain text for improved readability while preserving all content integrity.
 
 ## 📄 License
 

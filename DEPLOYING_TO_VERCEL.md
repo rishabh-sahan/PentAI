@@ -1,26 +1,29 @@
 # Deploying PentAI to Vercel
 
-This project is ready to deploy to Vercel (Next.js App Router). Follow these steps:
+PentAI is a standard Next.js App Router project, so Vercel deploys it with zero configuration.
 
-1. Create a Vercel account and connect your Git provider (GitHub/GitLab/Bitbucket).
-2. Push this repository to your remote (e.g., GitHub) and import it in Vercel.
-3. In the Vercel project settings → Environment Variables, add the API keys you'll use at runtime (these are example names used by the app):
+## Steps
 
-   - `OPENROUTER_API_KEY` — OpenRouter API key (optional, used for OpenRouter models)
-   - `GOOGLE_GENERATIVE_AI_API_KEY` — Google Generative API / Gemini key (optional, used for Gemini)
-   - `SUPABASE_URL` — (if using Supabase features)
-   - `SUPABASE_ANON_KEY` — (if using Supabase features)
+1. Push this repository to GitHub (or GitLab / Bitbucket) and import it in Vercel.
+2. Vercel auto-detects Next.js — no custom build command or output directory is needed.
+3. In **Project Settings → Environment Variables**, add your Supabase credentials:
 
-4. Build settings: Vercel will auto-detect Next.js. The project includes a `vercel-build` script and `vercel.json` to help Vercel detect the app. No custom build command is necessary (the default `npm run build` or `yarn build` will be used).
+   | Variable | Description |
+   |----------|-------------|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (publishable) key |
 
-5. Deploy. After deployment, visit the Vercel dashboard to view logs and set additional environment variables or secrets as needed.
+   These are the only environment variables the app reads. Provider keys for OpenRouter and Gemini
+   are supplied by each user at runtime through the in-app Settings panel and are never stored
+   on the server.
 
-Notes:
-- Server-side API routes are in `app/api/*` — they use standard fetch calls and require the appropriate provider API keys to be set in Vercel.
-- If you need higher concurrency or different runtime (Edge), you can add `export const runtime = 'edge'` to individual route handlers.
+4. In your **Supabase** project, add the deployed URL as an OAuth redirect:
+   `https://your-domain.vercel.app/auth/callback`
+5. Deploy.
 
-Optional follow-ups I can do for you:
-- Add a GitHub Action to build and run tests on pushes.
-- Add a `vercel` CLI workflow or sample preview deployment steps.
+## Notes
 
-Tell me which (if any) you want next.
+- Server-side API routes live in `app/api/*`. They act as thin proxies to OpenRouter and Gemini
+  using the key supplied in each request body, so they need no secrets of their own.
+- Without the Supabase variables set, the app still builds and the landing page renders, but login
+  fails with a "Missing Supabase environment variables" message.

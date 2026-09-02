@@ -4,7 +4,6 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, model, apiKey: apiKeyFromBody, imageDataUrl } = await req.json();
     const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';
-    const usedKeyType = 'user';
     if (!apiKey) return new Response(JSON.stringify({ error: 'Missing Gemini API key. Add your own key in Settings.' }), { status: 400 });
     const allowed = new Set(['gemini-2.5-flash', 'gemini-2.5-pro']);
     const requested = typeof model === 'string' ? model : 'gemini-2.5-flash';
@@ -74,27 +73,52 @@ export async function POST(req: NextRequest) {
       })();
       const errObj = errStr;
       if (resp.status === 429) {
-        const text = usedKeyType === 'user'
-          ? 'Your Gemini API key hit a rate limit. Please retry after a moment or upgrade your plan/limits.'
-          : 'This model hit a shared rate limit. Add your own Gemini API key for FREE in Settings for higher limits and reliability.';
-        return Response.json({ text, error: errObj, code: 429, provider: 'gemini', usedKeyType });
+        const text = 'Your Gemini API key hit a rate limit. Please retry after a moment or upgrade your plan/limits.';
+        return Response.json({ text, error: errObj, code: 429, provider: 'gemini' });
       }
       return new Response(JSON.stringify({ error: errObj, raw: data }), { status: resp.status });
     }
 
-    // Extract text
-    const extractText = (d: unknown): string => {
-      const candidates = (d as { candidates?: unknown[] } | null)?.candidates;
-      if (!Array.isArray(candidates) || candidates.length === 0) return '';
-      const cand = candidates[0] as { content?: { parts?: unknown[] } } | undefined;
-      const parts = cand?.content?.parts;
-      if (!Array.isArray(parts)) return '';
-      const texts = parts
-        .map((p) => (typeof (p as { text?: unknown })?.text === 'string' ? String((p as { text?: unknown }).text) : ''))
-        .filter(Boolean);
-      return texts.join('\n');
-    };
-    const text = extractText(data) ?? '';
+    // Normalize the response to plain text, with fallbacks for empty or blocked replies
+    const cand = (data as { candidates?: unknown[] } | null)?.candidates?.[0] as
+      | { content?: { parts?: unknown[] }; finishReason?: unknown; safetyRatings?: Array<{ category?: unknown }> }
+      | undefined;
+    const rawParts = (cand?.content as { parts?: unknown[] } | undefined)?.parts;
+    const parts: unknown[] = Array.isArray(rawParts) ? rawParts : [];
+
+    let text = parts
+      .map((p) => (typeof (p as { text?: unknown })?.text === 'string' ? String((p as { text?: unknown }).text) : ''))
+      .filter(Boolean)
+      .join('\n');
+
+    if (!text && parts.length) {
+      // No plain-text parts: surface whatever structure did come back
+      text = parts
+        .map((p) => {
+          const pp = p as { text?: unknown; inline_data?: unknown };
+          if (typeof pp?.text === 'string') return pp.text;
+          if (pp?.inline_data) return '[inline data]';
+          try { return JSON.stringify(p); } catch { return ''; }
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    if (!text) {
+      const finish = cand?.finishReason;
+      const blockReason =
+        (data as { promptFeedback?: { blockReason?: unknown } } | undefined)?.promptFeedback?.blockReason ??
+        cand?.safetyRatings?.[0]?.category;
+      const blocked = finish && String(finish).toLowerCase().includes('safety');
+      if (blocked || blockReason) {
+        text = `Gemini blocked the content due to safety settings${blockReason ? ` (reason: ${blockReason})` : ''}. Try rephrasing your prompt.`;
+      }
+    }
+
+    if (!text) {
+      text = 'Gemini returned an empty message. Try again, rephrase, or check your API key limits in Settings.';
+    }
+
     return Response.json({ text, raw: data });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';

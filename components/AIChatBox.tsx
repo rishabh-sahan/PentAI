@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { AnimatePresence, motion } from "framer-motion"
 import { Send, Loader2, X, Plus, Globe } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -58,21 +57,6 @@ function useAutoResizeTextarea({
 
 const MIN_HEIGHT = 48
 const MAX_HEIGHT = 164
-
-const AnimatedPlaceholder = ({ showSearch }: { showSearch: boolean }) => (
-  <AnimatePresence mode="wait">
-    <motion.p
-      key={showSearch ? "search" : "ask"}
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -5 }}
-      transition={{ duration: 0.1 }}
-      className="pointer-events-none w-[200px] text-sm absolute text-muted-foreground"
-    >
-      Ask anything…
-    </motion.p>
-  </AnimatePresence>
-)
 
 export function AiInput({ onSubmit, loading = false }: { onSubmit: (text: string, imageDataUrl?: string, webSearch?: boolean) => void; loading?: boolean }) {
   const [value, setValue] = useState("")

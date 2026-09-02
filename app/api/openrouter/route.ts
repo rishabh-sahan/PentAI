@@ -4,7 +4,6 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, model, apiKey: apiKeyFromBody, referer, title } = await req.json();
     const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';
-    const usedKeyType = 'user';
     if (!apiKey) return new Response(JSON.stringify({ error: 'Missing OpenRouter API key. Add your own key in Settings.' }), { status: 400 });
     if (!model) return new Response(JSON.stringify({ error: 'Missing model id' }), { status: 400 });
 
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': referer || 'http://localhost',
-        'X-Title': title || 'Open Source Fiesta',
+        'X-Title': title || 'PentAI',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(bodyObj),
@@ -54,14 +53,12 @@ export async function POST(req: NextRequest) {
       })();
       if (resp.status === 429) {
         // Convert to a friendly guidance text while preserving raw error
-        const text = usedKeyType === 'user'
-          ? 'Your OpenRouter API key hit a rate limit. Please retry after a moment or upgrade your plan/limits.'
-          : 'This model hit a shared rate limit. Add your own OpenRouter API key for FREE in Settings for higher limits and reliability.';
-        return Response.json({ text, error: errStr, code: 429, provider: 'openrouter', usedKeyType });
+        const text = 'Your OpenRouter API key hit a rate limit. Please retry after a moment or upgrade your plan/limits.';
+        return Response.json({ text, error: errStr, code: 429, provider: 'openrouter' });
       }
       if (resp.status === 404 && /model not found/i.test(errStr)) {
         const text = 'This model is currently unavailable on OpenRouter (404 model not found). It may be renamed, private, or the free pool is paused. Try again later or pick another model.';
-        return Response.json({ text, code: 404, provider: 'openrouter', usedKeyType }, { status: 404 });
+        return Response.json({ text, code: 404, provider: 'openrouter' }, { status: 404 });
       }
       // Special-case retry for Sarvam: try with only the last user message
       if (typeof model === 'string' && /sarvam/i.test(model)) {
@@ -78,16 +75,16 @@ export async function POST(req: NextRequest) {
             // continue to normalization below using new data
           } else {
             const friendly2 = `Provider returned error for ${model} (after retry) [status ${resp.status}]`;
-            return Response.json({ text: friendly2, code: resp.status, provider: 'openrouter', usedKeyType }, { status: resp.status });
+            return Response.json({ text: friendly2, code: resp.status, provider: 'openrouter' }, { status: resp.status });
           }
         } else {
           const friendly = `Provider returned error for ${model} [status ${resp.status}]`;
-          return Response.json({ text: friendly, code: resp.status, provider: 'openrouter', usedKeyType }, { status: resp.status });
+          return Response.json({ text: friendly, code: resp.status, provider: 'openrouter' }, { status: resp.status });
         }
       } else {
         // Return structured JSON but also a user-friendly text to render in UI
         const friendly = `Provider returned error${model ? ` for ${model}` : ''} [status ${resp.status}]`;
-        return Response.json({ text: friendly, code: resp.status, provider: 'openrouter', usedKeyType }, { status: resp.status });
+        return Response.json({ text: friendly, code: resp.status, provider: 'openrouter' }, { status: resp.status });
       }
     }
 

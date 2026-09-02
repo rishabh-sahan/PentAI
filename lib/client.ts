@@ -7,8 +7,7 @@ export type OpenRouterLiveModel = {
 };
 
 export async function callGemini(args: { apiKey?: string; model: string; messages: ChatMessage[]; imageDataUrl?: string }) {
-  const endpoint = args.model === 'gemini-2.5-pro' ? '/api/gemini-pro' : '/api/gemini';
-  const res = await fetch(endpoint, {
+  const res = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
@@ -20,7 +19,7 @@ export async function callOpenRouter(args: { apiKey?: string; model: string; mes
   const res = await fetch('/api/openrouter', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...args, referer: typeof window !== 'undefined' ? window.location.origin : undefined, title: 'AI Fiesta' }),
+    body: JSON.stringify({ ...args, referer: typeof window !== 'undefined' ? window.location.origin : undefined, title: 'PentAI' }),
   });
   return res.json();
 }

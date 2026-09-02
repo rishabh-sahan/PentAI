@@ -28,7 +28,7 @@ const makeLiveModelUiId = (id: string) =>
 
 export default function Home() {
   const [selectedIds, setSelectedIds] = useLocalStorage<string[]>(
-    "ai-fiesta:selected-models",
+    "pentai:selected-models",
     [
       "gemini-2.5-flash",
       "llama-3.3-70b-instruct",
@@ -37,10 +37,10 @@ export default function Home() {
       "glm-4.5-air",
     ]
   );
-  const [keys] = useLocalStorage<ApiKeys>("ai-fiesta:keys", {});
-  const [threads, setThreads] = useLocalStorage<ChatThread[]>("ai-fiesta:threads", []);
-  const [activeId, setActiveId] = useLocalStorage<string | null>("ai-fiesta:active-thread", null);
-  const [sidebarOpen, setSidebarOpen] = useLocalStorage<boolean>("ai-fiesta:sidebar-open", true);
+  const [keys] = useLocalStorage<ApiKeys>("pentai:keys", {});
+  const [threads, setThreads] = useLocalStorage<ChatThread[]>("pentai:threads", []);
+  const [activeId, setActiveId] = useLocalStorage<string | null>("pentai:active-thread", null);
+  const [sidebarOpen, setSidebarOpen] = useLocalStorage<boolean>("pentai:sidebar-open", true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [modelsModalOpen, setModelsModalOpen] = useState(false);
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
@@ -105,7 +105,7 @@ export default function Home() {
   const anyLoading = loadingIds.length > 0;
   const [copiedAllIdx, setCopiedAllIdx] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [firstNoteDismissed, setFirstNoteDismissed] = useLocalStorage<boolean>('ai-fiesta:first-visit-note-dismissed', false);
+  const [firstNoteDismissed, setFirstNoteDismissed] = useLocalStorage<boolean>('pentai:first-visit-note-dismissed', false);
   const showFirstVisitNote = !firstNoteDismissed && (!keys?.openrouter || !keys?.gemini);
 
   const { session, loading } = useAuth();
