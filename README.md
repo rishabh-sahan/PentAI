@@ -77,6 +77,12 @@ context/                            # Supabase auth provider
 lib/                                # Model catalog, client helpers, types
 ```
 
+## 🚀 Deploying
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for Vercel setup — environment variables,
+the Supabase redirect configuration (easy to miss, and it breaks sign-in), and
+why the API routes declare their own function timeouts.
+
 ## ⚠️ A note on free-model rate limits
 
 OpenRouter caps its free tier at roughly **20 requests per minute** shared across all free models,

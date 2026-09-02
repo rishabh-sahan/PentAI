@@ -1,3 +1,9 @@
+/*
+  Vercel: catalog lookups are fast and cached; a short ceiling is plenty and
+  keeps a stalled upstream from holding a function open.
+*/
+export const maxDuration = 15;
+
 
 
 /*

@@ -1,5 +1,15 @@
 import { NextRequest } from 'next/server';
 
+/*
+  Vercel: chat completions are slow and the platform default depends on whether
+  fluid compute is enabled on the account (300s with it, but only 10s without —
+  which LLM calls routinely exceed). Declaring it explicitly makes the deploy
+  behave the same either way, while still capping a hung upstream request.
+  60s is within the Hobby ceiling in both configurations.
+*/
+export const maxDuration = 60;
+
+
 export async function POST(req: NextRequest) {
   try {
     const { messages, model, apiKey: apiKeyFromBody, attachments } = await req.json();
