@@ -42,7 +42,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       console.error('Login error:', error);
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('Missing Supabase environment variables')) {
-        alert('Login is not configured on this deployment: missing Supabase environment variables.\n\nPlease set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your Vercel project settings and add the deployment URL as an OAuth redirect (e.g., https://your.domain/auth/callback) in your Supabase project settings.');
+        alert('Login is not configured on this deployment: missing Supabase environment variables.\n\nPlease set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your hosting provider\'s environment variables and add the deployment URL as an OAuth redirect (e.g., https://your.domain/auth/callback) in your Supabase project settings.');
       } else {
         alert('An unexpected error occurred during login. Check the browser console and deployment logs for details.');
       }
