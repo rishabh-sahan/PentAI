@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { requireUser } from '@/lib/auth/session';
 
 /*
   Vercel: catalog lookups are fast and cached; a short ceiling is plenty and
@@ -33,6 +34,11 @@ const isLikelyFree = (id: string, pricing: OpenRouterModelRecord['pricing']): bo
 };
 
 export async function GET(req: NextRequest) {
+  // Closed route: these proxy paid upstreams, so an anonymous caller
+  // must not be able to burn function time or enumerate catalogs.
+  const { response: unauthorized } = await requireUser();
+  if (unauthorized) return unauthorized;
+
   try {
     const apiKey = req.headers.get('x-openrouter-key')?.trim() ?? '';
     const headers: Record<string, string> = {

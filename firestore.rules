@@ -1,0 +1,66 @@
+rules_version = '2';
+
+/*
+  PentAI Firestore Security Rules.
+
+  These are the real access-control boundary for chat data. The browser talks
+  to Firestore directly, so anything not forbidden here is permitted to anyone
+  who opens devtools — the client code is not a control.
+
+  Deploy with:  firebase deploy --only firestore:rules
+*/
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Everything a user owns lives under users/{uid}. Ownership is therefore
+    // structural: the path itself carries the owner, and a request for someone
+    // else's data simply fails to match.
+    match /users/{uid} {
+
+      function isOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      // The user document itself is unused today; deny it rather than leave
+      // an unguarded surface for later.
+      allow read, write: if false;
+
+      match /threads/{threadId} {
+
+        function validThread() {
+          return request.resource.data.title is string
+              && request.resource.data.title.size() <= 200
+              && request.resource.data.pinned is bool
+              && request.resource.data.createdAt is number;
+        }
+
+        allow read, delete: if isOwner();
+        allow create, update: if isOwner() && validThread();
+
+        match /messages/{messageId} {
+
+          function validMessage() {
+            return request.resource.data.role in ['user', 'assistant', 'system']
+                && request.resource.data.content is string
+                // Firestore's per-document ceiling is ~1 MB; refuse anything
+                // near it so a single message can't wedge a thread.
+                && request.resource.data.content.size() <= 900000
+                && request.resource.data.seq is number;
+          }
+
+          allow read, delete: if isOwner();
+          allow create: if isOwner() && validMessage();
+          // Messages are an append-only log — editing history is not a feature.
+          allow update: if false;
+        }
+      }
+    }
+
+    // Anything not matched above is denied. Stated explicitly so that adding a
+    // new collection later fails closed rather than silently inheriting access.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

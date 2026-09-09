@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { requireUser } from '@/lib/auth/session';
 
 /*
   Vercel: chat completions are slow and the platform default depends on whether
@@ -11,6 +12,11 @@ export const maxDuration = 60;
 
 
 export async function POST(req: NextRequest) {
+  // Closed route: these proxy paid upstreams, so an anonymous caller
+  // must not be able to burn function time or enumerate catalogs.
+  const { response: unauthorized } = await requireUser();
+  if (unauthorized) return unauthorized;
+
   try {
     const { messages, model, apiKey: apiKeyFromBody, referer, title, attachments } = await req.json();
     const apiKey = typeof apiKeyFromBody === 'string' && apiKeyFromBody.trim() ? String(apiKeyFromBody).trim() : '';

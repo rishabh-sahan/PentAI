@@ -1,7 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Github, Loader2 } from "lucide-react"
+import {
+  GithubAuthProvider,
+  GoogleAuthProvider,
+  signInWithPopup,
+  type AuthProvider as FirebaseAuthProvider,
+} from "firebase/auth"
 
 import {
   Dialog,
@@ -11,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { getSupabase } from "@/lib/supabaseClient"
+import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -21,27 +28,55 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [pending, setPending] = useState<"google" | "github" | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
-  const handleOAuthLogin = async (provider: "google" | "github") => {
-    setPending(provider)
+  const handleLogin = async (kind: "google" | "github") => {
+    setPending(kind)
     setError(null)
+
+    if (!isFirebaseConfigured()) {
+      setError("Sign-in isn't configured on this deployment yet.")
+      setPending(null)
+      return
+    }
+
     try {
-      const { error } = await getSupabase().auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      const provider: FirebaseAuthProvider =
+        kind === "google" ? new GoogleAuthProvider() : new GithubAuthProvider()
+
+      const credential = await signInWithPopup(getFirebaseAuth(), provider)
+
+      /*
+        Mint the server session before navigating. Middleware guards /dashboard
+        on the cookie, so routing first would bounce straight back to the
+        landing page while the cookie was still in flight.
+      */
+      const idToken = await credential.user.getIdToken()
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
       })
-      if (error) {
-        setError(error.message)
-        setPending(null)
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.error ?? "Could not start your session.")
       }
-      // On success Supabase redirects away, so leave the pending state as-is.
+
+      onClose()
+      router.push("/dashboard")
+      router.refresh()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setError(
-        msg.includes("Missing Supabase environment variables")
-          ? "Login isn't configured on this deployment yet."
-          : "Something went wrong. Please try again."
-      )
+      const code = (err as { code?: string })?.code ?? ""
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        setError(null) // user backed out; not an error worth showing
+      } else if (code === "auth/account-exists-with-different-credential") {
+        setError("That email is already registered with the other sign-in method.")
+      } else if (code === "auth/unauthorized-domain") {
+        setError("This domain isn't authorised in Firebase Authentication settings.")
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+      }
       setPending(null)
     }
   }
@@ -52,8 +87,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         <DialogHeader>
           <DialogTitle>Sign in to PentAI</DialogTitle>
           <DialogDescription>
-            Your chats and API keys stay in your browser. Signing in just keeps your workspace
-            yours.
+            Your chats sync across devices. API keys stay in this browser and are never uploaded.
           </DialogDescription>
         </DialogHeader>
 
@@ -62,7 +96,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             variant="outline"
             className="h-10 w-full justify-center gap-2"
             disabled={pending !== null}
-            onClick={() => handleOAuthLogin("google")}
+            onClick={() => handleLogin("google")}
           >
             {pending === "google" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -93,7 +127,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             variant="outline"
             className="h-10 w-full justify-center gap-2"
             disabled={pending !== null}
-            onClick={() => handleOAuthLogin("github")}
+            onClick={() => handleLogin("github")}
           >
             {pending === "github" ? (
               <Loader2 className="h-4 w-4 animate-spin" />

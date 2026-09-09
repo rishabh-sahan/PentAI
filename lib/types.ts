@@ -32,10 +32,20 @@ export type ApiKeys = {
   sarvam?: string;
 };
 
-export type ChatThread = {
+/**
+ * Thread metadata without message bodies.
+ *
+ * The sidebar and thread list only ever need this, and messages now live in
+ * their own Firestore subcollection — loading every message of every thread to
+ * render a list of titles would be pointless traffic.
+ */
+export type ThreadSummary = {
   id: string;
   title: string;
-  messages: ChatMessage[];
   createdAt: number;
   pinned?: boolean;
+};
+
+export type ChatThread = ThreadSummary & {
+  messages: ChatMessage[];
 };

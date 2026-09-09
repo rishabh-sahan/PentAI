@@ -26,7 +26,7 @@ const NAV_ITEMS = [
 
 export function Header() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  const { session, loading, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -43,7 +43,7 @@ export function Header() {
     document.getElementById(href.substring(1))?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const displayName = session?.user?.user_metadata?.name || session?.user?.email || "Account"
+  const displayName = user?.displayName || user?.email || "Account"
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/60 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/45">
@@ -71,7 +71,7 @@ export function Header() {
 
           {loading ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
-          ) : session ? (
+          ) : user ? (
             <div className="flex items-center gap-2">
               <Button asChild className="hidden h-10 px-5 md:inline-flex">
                 <Link href="/dashboard">Open workspace</Link>
@@ -85,7 +85,7 @@ export function Header() {
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
                     <p className="truncate text-sm font-medium">{displayName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{session.user?.email}</p>
+                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => void logout()} className="cursor-pointer">
@@ -123,7 +123,7 @@ export function Header() {
                     {item.name}
                   </a>
                 ))}
-                {session && (
+                {user && (
                   <Button asChild className="mt-3">
                     <Link href="/dashboard">Open workspace</Link>
                   </Button>

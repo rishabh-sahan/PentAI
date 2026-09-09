@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { MoreHorizontal, Pencil, Pin, PinOff, Plus, Trash2 } from "lucide-react"
 
-import { ChatThread } from "@/lib/types"
+import { ThreadSummary } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -15,13 +15,13 @@ import {
 import { cn } from "@/lib/utils"
 
 type Props = {
-  threads: ChatThread[]
+  threads: ThreadSummary[]
   activeId: string | null
   renamingId: string | null
   renameValue: string
   onSelect: (id: string) => void
   onNewChat: () => void
-  onStartRename: (thread: ChatThread) => void
+  onStartRename: (thread: ThreadSummary) => void
   onRenameChange: (value: string) => void
   onCommitRename: (id: string) => void
   onCancelRename: () => void

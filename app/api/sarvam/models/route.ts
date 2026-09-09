@@ -1,3 +1,4 @@
+import { requireUser } from '@/lib/auth/session';
 /*
   Vercel: catalog lookups are fast and cached; a short ceiling is plenty and
   keeps a stalled upstream from holding a function open.
@@ -37,6 +38,11 @@ const titleCase = (id: string) =>
     .trim();
 
 export async function GET() {
+  // Closed route: these proxy paid upstreams, so an anonymous caller
+  // must not be able to burn function time or enumerate catalogs.
+  const { response: unauthorized } = await requireUser();
+  if (unauthorized) return unauthorized;
+
   try {
     const resp = await fetch('https://api.sarvam.ai/v2/models', {
       method: 'GET',

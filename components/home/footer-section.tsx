@@ -10,12 +10,12 @@ import { LoginModal } from "@/components/auth/LoginModal"
 import { useAuth } from "@/context/AuthContext"
 
 export function FooterSection() {
-  const { session } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
 
   const handleGetStarted = () => {
-    if (session) router.push("/dashboard")
+    if (user) router.push("/dashboard")
     else setIsLoginModalOpen(true)
   }
 

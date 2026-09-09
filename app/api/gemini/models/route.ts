@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { requireUser } from '@/lib/auth/session';
 
 /*
   Vercel: catalog lookups are fast; a short ceiling keeps a stalled upstream
@@ -24,6 +25,11 @@ const FALLBACK = [
 const EXCLUDE = /embedding|aqa|imagen|veo|image-generation|tts|native-audio|live-/i;
 
 export async function GET(req: NextRequest) {
+  // Closed route: these proxy paid upstreams, so an anonymous caller
+  // must not be able to burn function time or enumerate catalogs.
+  const { response: unauthorized } = await requireUser();
+  if (unauthorized) return unauthorized;
+
   const apiKey = req.headers.get('x-gemini-key')?.trim() ?? '';
 
   if (!apiKey) {

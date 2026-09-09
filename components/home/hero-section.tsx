@@ -12,12 +12,12 @@ import { HeroDemo } from "./hero-demo"
 const PROOF_POINTS = ["5 models at once", "Free models included", "No subscription"]
 
 export function HeroSection() {
-  const { session } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
 
   const handleGetStarted = () => {
-    if (session) router.push("/dashboard")
+    if (user) router.push("/dashboard")
     else setIsLoginModalOpen(true)
   }
 

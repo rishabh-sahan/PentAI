@@ -80,16 +80,24 @@ cd PentAI
 npm install
 ```
 
-Create `.env.local` with your Supabase credentials (used only for sign-in):
+Copy `.env.example` to `.env.local` and fill in your Firebase project values —
+the file explains where each one comes from and which are secrets.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```bash
+cp .env.example .env.local
 ```
 
-In your Supabase project, go to **Authentication → URL Configuration** and add
-`http://localhost:3000/auth/callback` to **Redirect URLs**. Sign-in fails
-silently without this.
+Then, in the [Firebase console](https://console.firebase.google.com):
+
+1. **Authentication → Sign-in method** — enable **Google** and **GitHub**.
+2. **Authentication → Settings → Authorised domains** — add `localhost`, and
+   your deployed domain when you have one.
+3. **Firestore Database** — create one, then deploy the rules in this repo:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+   Without those rules Firestore denies everything (or, on test mode, allows
+   far too much) — they are what stop one user reading another's chats.
 
 ```bash
 npm run dev     # http://localhost:3000
@@ -120,7 +128,7 @@ requests. **The server holds no keys of its own** — the API routes are thin
 proxies that forward whatever the browser sends. Nobody else's traffic can be
 billed to your account, and there is no shared quota to exhaust.
 
-The only environment variables the app reads are the two Supabase ones above.
+The only environment variables the app reads are the Firebase ones in `.env.example`.
 
 ---
 
@@ -135,7 +143,7 @@ app/
 │   ├── openrouter/models/route.ts   # Live OpenRouter catalog, free-tier detection
 │   ├── sarvam/route.ts              # Sarvam chat, /v1 and /v2 routing
 │   └── sarvam/models/route.ts       # Live Sarvam catalog
-├── auth/callback/page.tsx           # Supabase OAuth landing
+│   └── auth/session/route.ts        # Mints/clears the httpOnly session cookie
 ├── dashboard/page.tsx               # The comparison workspace
 ├── page.tsx                         # Landing page
 ├── layout.tsx                       # Root layout, theme + auth providers
@@ -158,10 +166,18 @@ lib/
 ├── client.ts                        # Browser → API route helpers
 ├── models.ts                        # Fallback catalog only (see the file's comment)
 ├── types.ts                         # Shared types
-├── supabaseClient.ts                # Lazy Supabase client
-└── useLocalStorage.ts               # Cross-tab syncing storage hook
+├── useLocalStorage.ts               # Cross-tab syncing storage hook
+├── auth/
+│   ├── constants.ts                 # Edge-safe cookie name (middleware imports this)
+│   └── session.ts                   # requireUser() — server-side session verification
+└── firebase/
+    ├── client.ts                    # Browser SDK (auth + Firestore)
+    ├── admin.ts                     # Admin SDK — the trust boundary
+    └── threads.ts                   # Thread/message CRUD + live subscriptions
 
-context/AuthContext.tsx              # Supabase session provider
+context/AuthContext.tsx              # Firebase session provider
+middleware.ts                        # Server-side /dashboard guard
+firestore.rules                      # Per-user access control
 ```
 
 ---
@@ -179,17 +195,32 @@ never blanks the others, and selections are only pruned after *every* catalog
 has resolved — otherwise a slow fetch would wipe a valid selection mid-load.
 The first run seeds a default selection from models that are live right now.
 
-**Storage.** Everything is local to your browser:
+**Storage is split deliberately.**
 
-| Key | Holds |
-|-----|-------|
-| `pentai:keys` | Your provider API keys |
-| `pentai:threads` | Conversations |
-| `pentai:active-thread` | Which thread is open |
-| `pentai:selected-models` | Current model selection |
-| `pentai:default-openrouter-seeded` | Whether the first-run default has been applied |
+Chats live in Firestore under `users/{uid}/threads/{threadId}`, with messages in
+a `messages` subcollection rather than an array on the thread — five answers per
+turn puts a long thread past Firestore's hard 1 MB per-document limit. Both are
+live subscriptions, so signing in on a second device shows your history
+immediately, and a reply on one device appears on the other without a refresh.
 
-Supabase is used **only** to sign in. No chat content ever reaches a database.
+| Key | Holds | Where |
+|-----|-------|-------|
+| `pentai:keys` | Your provider API keys | **This browser only** |
+| `pentai:active-thread` | Which thread is open | This browser only |
+| `pentai:selected-models` | Current model selection | This browser only |
+| `pentai:default-openrouter-seeded` | First-run default applied | This browser only |
+| threads + messages | Your conversations | Firestore, per account |
+
+**API keys are deliberately never uploaded.** Syncing them would make PentAI the
+custodian of credentials that can be billed to you — so you re-enter them once
+per device, and a breach of this app can never leak them.
+
+**Security model.** `middleware.ts` blocks unauthenticated page loads before any
+HTML is sent, every API route verifies a signed session cookie via the Firebase
+Admin SDK, and `firestore.rules` scopes all reads and writes to
+`users/{request.auth.uid}`. The middleware only checks that a cookie is present
+— the Edge runtime cannot run the Admin SDK — so cryptographic verification
+happens in the routes and in Firestore, which is where the data actually is.
 
 ---
 
@@ -244,7 +275,8 @@ between devices.
 |---|---|
 | **Framework** | Next.js 15 (App Router) · React 19 · TypeScript |
 | **Styling** | Tailwind CSS v4 · shadcn/ui on Radix primitives |
-| **Auth** | Supabase (Google and GitHub OAuth) |
+| **Auth** | Firebase Authentication (Google and GitHub OAuth) |
+| **Database** | Cloud Firestore — per-user chats, live-synced |
 | **Animation** | CSS + IntersectionObserver — no animation library |
 | **Runtime** | Node.js 22.x |
 

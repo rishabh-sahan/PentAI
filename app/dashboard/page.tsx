@@ -13,7 +13,7 @@ import { MAX_SELECTED, ModelPicker } from "@/components/dashboard/ModelPicker"
 import { Button } from "@/components/ui/button"
 import { useLocalStorage } from "@/lib/useLocalStorage"
 import { MODEL_CATALOG } from "@/lib/models"
-import { AiModel, ApiKeys, ChatMessage, ChatThread, Provider } from "@/lib/types"
+import { AiModel, ApiKeys, ChatMessage, Provider, ThreadSummary } from "@/lib/types"
 import {
   callGemini,
   callOpenRouter,
@@ -27,6 +27,15 @@ import {
 } from "@/lib/client"
 import { binaryFor, buildPromptWithText, type Attachment } from "@/lib/attachments"
 import { useAuth } from "@/context/AuthContext"
+import {
+  appendMessage,
+  createThread,
+  deleteThread as deleteThreadDoc,
+  renameThread,
+  setThreadPinned,
+  subscribeToMessages,
+  subscribeToThreads,
+} from "@/lib/firebase/threads"
 import { cn } from "@/lib/utils"
 
 const normalizeModelId = (id: string) => id.trim().toLowerCase()
@@ -44,7 +53,7 @@ const PROVIDER_LABEL: Record<Provider, string> = {
 }
 
 export default function DashboardPage() {
-  const { session, loading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   // Empty by default: every model id is now derived from a live catalog, so any
@@ -56,8 +65,16 @@ export default function DashboardPage() {
     false
   )
   const [keys] = useLocalStorage<ApiKeys>("pentai:keys", {})
-  const [threads, setThreads] = useLocalStorage<ChatThread[]>("pentai:threads", [])
+  /*
+    Threads and messages live in Firestore, not localStorage — that is what
+    makes them appear on a second device. Both are live subscriptions, so a
+    write from another tab or another machine lands here without a refetch.
+    Only the active-thread pointer stays local; it is a per-device UI concern.
+  */
+  const [threads, setThreads] = useState<ThreadSummary[]>([])
+  const [threadMessages, setThreadMessages] = useState<ChatMessage[]>([])
   const [activeId, setActiveId] = useLocalStorage<string | null>("pentai:active-thread", null)
+  const [dataError, setDataError] = useState<string | null>(null)
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -76,7 +93,7 @@ export default function DashboardPage() {
     () => threads.find((t) => t.id === activeId) ?? null,
     [threads, activeId]
   )
-  const messages = useMemo(() => activeThread?.messages ?? [], [activeThread])
+  const messages = threadMessages
 
   /* ---------------------------------------------------------------- catalog */
 
@@ -197,9 +214,41 @@ export default function DashboardPage() {
 
   /* ----------------------------------------------------------------- effects */
 
+  // Middleware already blocks unauthenticated page loads; this only covers a
+  // session expiring while the tab is open.
   useEffect(() => {
-    if (!loading && !session) router.push("/?login=1")
-  }, [session, loading, router])
+    if (!loading && !user) router.push("/?login=1")
+  }, [user, loading, router])
+
+  // Live thread list for this user.
+  useEffect(() => {
+    if (!user) {
+      setThreads([])
+      return
+    }
+    return subscribeToThreads(
+      user.uid,
+      (next) => {
+        setThreads(next)
+        setDataError(null)
+      },
+      (err) => setDataError(err.message)
+    )
+  }, [user])
+
+  // Live messages for the open thread.
+  useEffect(() => {
+    if (!user || !activeId) {
+      setThreadMessages([])
+      return
+    }
+    return subscribeToMessages(
+      user.uid,
+      activeId,
+      setThreadMessages,
+      (err) => setDataError(err.message)
+    )
+  }, [user, activeId])
 
   useEffect(() => {
     void syncModels()
@@ -259,16 +308,18 @@ export default function DashboardPage() {
     window.setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500)
   }
 
-  const newChat = () => {
-    const thread: ChatThread = {
-      id: crypto.randomUUID(),
-      title: "New chat",
-      messages: [],
-      createdAt: Date.now(),
-    }
-    setThreads((prev) => [thread, ...prev])
-    setActiveId(thread.id)
+  const newChat = async () => {
+    if (!user) return
+    const id = crypto.randomUUID()
+    // The subscription will deliver the thread; set it active optimistically so
+    // the UI doesn't flicker while the write round-trips.
+    setActiveId(id)
     setSidebarOpen(false)
+    try {
+      await createThread(user.uid, id, "New chat")
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : "Could not create the chat.")
+    }
   }
 
   const toggleModel = (id: string) => {
@@ -279,28 +330,37 @@ export default function DashboardPage() {
     })
   }
 
-  const commitRename = (id: string) => {
+  const commitRename = async (id: string) => {
     const title = renameValue.trim()
-    if (title) setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)))
     setRenamingId(null)
     setRenameValue("")
+    if (!title || !user) return
+    try {
+      await renameThread(user.uid, id, title)
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : "Could not rename the chat.")
+    }
   }
 
-  const togglePin = (id: string) => {
-    setThreads((prev) => {
-      const target = prev.find((t) => t.id === id)
-      if (!target) return prev
-      const updated = { ...target, pinned: !target.pinned }
-      const others = prev.filter((t) => t.id !== id)
-      return updated.pinned
-        ? [updated, ...others]
-        : [...others.filter((t) => t.pinned), updated, ...others.filter((t) => !t.pinned)]
-    })
+  const togglePin = async (id: string) => {
+    if (!user) return
+    const current = threads.find((t) => t.id === id)
+    if (!current) return
+    try {
+      await setThreadPinned(user.uid, id, !current.pinned)
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : "Could not pin the chat.")
+    }
   }
 
-  const deleteThread = (id: string) => {
-    setThreads((prev) => prev.filter((t) => t.id !== id))
+  const deleteThread = async (id: string) => {
+    if (!user) return
     if (activeId === id) setActiveId(null)
+    try {
+      await deleteThreadDoc(user.uid, id)
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : "Could not delete the chat.")
+    }
   }
 
   async function send(text: string, attachments: Attachment[] = []) {
@@ -329,49 +389,59 @@ export default function DashboardPage() {
       return
     }
 
-    let thread = activeThread
-    if (!thread) {
-      thread = {
-        id: crypto.randomUUID(),
-        title: (typed || "Attached files").slice(0, 48),
-        messages: [],
-        createdAt: Date.now(),
+    if (!user) return
+    const uid = user.uid
+
+    // Create the thread on first send if there isn't one open.
+    let threadId = activeThread?.id ?? null
+    if (!threadId) {
+      threadId = crypto.randomUUID()
+      setActiveId(threadId)
+      try {
+        await createThread(uid, threadId, (typed || "Attached files").slice(0, 48))
+      } catch (err) {
+        setDataError(err instanceof Error ? err.message : "Could not start the chat.")
+        return
       }
-      setThreads((prev) => [thread as ChatThread, ...prev])
-      setActiveId(thread.id)
+    } else if (activeThread?.title === "New chat") {
+      // Give an untitled thread its name from the first thing asked.
+      void renameThread(uid, threadId, (typed || "Attached files").slice(0, 48)).catch(() => {})
     }
-    const threadId = thread.id
 
-    // What the models receive (files inlined) vs what the transcript shows.
+    /*
+      Two versions of the same turn: the model gets the prompt with file
+      contents inlined, while the transcript stores just what was typed plus
+      the filenames — otherwise a 50k-character upload would fill the view and
+      be re-sent as history on every later turn.
+    */
     const userMsgForModel: ChatMessage = { role: "user", content: prompt, ts: Date.now() }
-    const userMsgForDisplay: ChatMessage = {
-      role: "user",
-      content: `${typed || "Please review the attached file(s)."}${attachmentSummary}`,
-      ts: userMsgForModel.ts,
-    }
-    const history = [...(thread.messages ?? []), userMsgForModel]
+    const history = [...messages, userMsgForModel]
 
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === threadId
-          ? {
-              ...t,
-              title:
-                t.title === "New chat"
-                  ? (typed || "Attached files").slice(0, 48)
-                  : t.title,
-              messages: [...(t.messages ?? []), userMsgForDisplay],
-            }
-          : t
-      )
-    )
+    // seq keeps column order stable: five models can resolve inside the same
+    // millisecond, so ordering on the timestamp alone reshuffles on reload.
+    const baseSeq = Date.now()
+    let seqOffset = 0
+
+    void appendMessage(
+      uid,
+      threadId,
+      {
+        role: "user",
+        content: `${typed || "Please review the attached file(s)."}${attachmentSummary}`,
+        ts: userMsgForModel.ts,
+      },
+      baseSeq
+    ).catch((err) => setDataError(err instanceof Error ? err.message : "Could not save message."))
 
     const appendAnswer = (content: string, modelId: string) => {
-      const answer: ChatMessage = { role: "assistant", content, modelId, ts: Date.now() }
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === threadId ? { ...t, messages: [...(t.messages ?? history), answer] } : t
-        )
+      seqOffset += 1
+      void appendMessage(
+        uid,
+        threadId as string,
+        { role: "assistant", content, modelId, ts: Date.now() },
+        baseSeq + seqOffset
+      ).catch((err) =>
+        setDataError(err instanceof Error ? err.message : "Could not save the answer.")
       )
     }
 
@@ -426,7 +496,7 @@ export default function DashboardPage() {
 
   /* ------------------------------------------------------------------ render */
 
-  if (loading || !session) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -449,7 +519,7 @@ export default function DashboardPage() {
       setSidebarOpen(false)
     },
     onNewChat: newChat,
-    onStartRename: (thread: ChatThread) => {
+    onStartRename: (thread: ThreadSummary) => {
       setRenamingId(thread.id)
       setRenameValue(thread.title || "")
     },
@@ -539,6 +609,16 @@ export default function DashboardPage() {
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
+          </div>
+        )}
+
+        {/* A Firestore permission or connectivity failure must be visible —
+            otherwise chats silently stop saving and look merely empty. */}
+        {dataError && (
+          <div className="shrink-0 border-b border-destructive/30 bg-destructive/8 px-4 py-2">
+            <p className="text-xs text-destructive">
+              Chat sync problem: {dataError}
+            </p>
           </div>
         )}
 

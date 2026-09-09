@@ -1,57 +1,74 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Session } from '@supabase/supabase-js';
-import { getSupabase } from '@/lib/supabaseClient';
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+
+import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client";
 
 interface AuthContextType {
-  session: Session | null;
+  user: User | null;
   loading: boolean;
+  configured: boolean;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const configured = isFirebaseConfigured();
+
+  useEffect(() => {
+    if (!configured) {
+      // No config (e.g. a preview deploy without env vars): don't hang on a
+      // spinner forever, just report signed-out.
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (nextUser) => {
+      setUser(nextUser);
+      setLoading(false);
+
+      /*
+        Keep the httpOnly session cookie in step with the client SDK.
+
+        The SDK's own session lives in IndexedDB, which the server cannot read.
+        Middleware and the API routes authorise off this cookie, so if the two
+        drift the user ends up "signed in" in the UI while every request 401s.
+      */
+      if (nextUser) {
+        try {
+          const idToken = await nextUser.getIdToken();
+          await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          });
+        } catch (err) {
+          console.error("Could not establish server session:", err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [configured]);
 
   const logout = async () => {
     try {
-      const supabase = getSupabase();
-      await supabase.auth.signOut();
-      setSession(null);
-    } catch (error) {
-      console.error('Error logging out:', error);
+      // Clear the server cookie first: if the page unloads midway, a stale
+      // cookie is worse than a stale client session.
+      await fetch("/api/auth/session", { method: "DELETE" });
+      if (configured) await signOut(getFirebaseAuth());
+      setUser(null);
+    } catch (err) {
+      console.error("Error signing out:", err);
     }
   };
 
-  useEffect(() => {
-    try {
-      const supabase = getSupabase();
-
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setLoading(false);
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session);
-        setLoading(false);
-      });
-
-      return () => subscription.unsubscribe();
-    } catch (err) {
-      // If Supabase env vars are not set during prerender/build, quietly
-      // mark loading false and avoid throwing at import time.
-      console.warn('Supabase not configured:', err instanceof Error ? err.message : err);
-      setLoading(false);
-      return () => {};
-    }
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ session, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, configured, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -60,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
