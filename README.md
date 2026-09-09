@@ -264,8 +264,12 @@ Sarvam's own models (`sarvam-105b`) work on any valid key.
 token. With five models in parallel this keeps the grid stable, but a long
 response shows a loading skeleton until it lands.
 
-**Local-only history.** Clearing site data clears your chats. There is no sync
-between devices.
+**`jose` is pinned to v5 on purpose.** `firebase-admin` pulls in `jwks-rsa`,
+which is CommonJS and does a plain `require('jose')`. `jose` v6 is ESM-only, so
+that require throws `ERR_REQUIRE_ESM` under Vercel's module loader — taking down
+every API route in production while still working locally on Node 22.12+, which
+supports `require(esm)`. The `overrides` block in `package.json` holds `jose` at
+v5, which ships a CommonJS build. Removing it breaks production only.
 
 ---
 

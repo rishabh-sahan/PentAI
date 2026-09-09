@@ -5,6 +5,9 @@
     "node": "22.x"
   },
   "private": true,
+  "overrides": {
+    "jose": "^5.10.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
