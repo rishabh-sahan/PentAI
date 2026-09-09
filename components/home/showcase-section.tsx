@@ -36,7 +36,7 @@ const CAPABILITIES = [
 export function ShowcaseSection() {
   return (
     <section id="features" className="border-b border-border">
-      <div className="mx-auto w-full max-w-6xl px-6 py-20 md:py-28">
+      <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 md:py-28">
         <div data-reveal className="mx-auto max-w-2xl text-center">
           <p className="text-base font-semibold uppercase tracking-[0.12em] text-primary md:text-lg">Why it&apos;s useful</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">

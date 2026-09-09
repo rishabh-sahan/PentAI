@@ -26,7 +26,7 @@ export function FooterSection() {
         <div className="aurora opacity-60" aria-hidden="true" />
         <div
           data-reveal
-          className="relative z-10 mx-auto w-full max-w-6xl px-6 py-20 text-center md:py-28"
+          className="relative z-10 mx-auto w-full max-w-6xl px-4 py-20 text-center sm:px-6 md:py-28"
         >
           <h2 className="mx-auto max-w-xl text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
             One question. Five answers. No guesswork.
@@ -42,7 +42,7 @@ export function FooterSection() {
       </div>
 
       {/* Footer bar */}
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
+      <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
         <Link href="/" className="text-sm font-semibold tracking-tight text-foreground">
           PentAI
         </Link>

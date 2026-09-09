@@ -32,7 +32,7 @@ export function HeroSection() {
         away as soon as the hero left the viewport.
       */}
       <div className="relative z-10">
-        <div className="mx-auto w-full max-w-6xl px-6 pb-20 pt-16 md:pb-28 md:pt-24">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-16 sm:px-6 md:pb-28 md:pt-24">
           <div className="mx-auto max-w-3xl text-center">
             <div
               data-reveal

@@ -78,7 +78,7 @@ const PROVIDERS = [
 export function ProviderLogos() {
   return (
     <section className="border-b border-border bg-muted/30">
-      <div className="mx-auto w-full max-w-6xl px-6 py-14 md:py-16">
+      <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 md:py-16">
         <p
           data-reveal
           className="text-center text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground"

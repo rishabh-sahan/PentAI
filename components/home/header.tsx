@@ -26,6 +26,7 @@ const NAV_ITEMS = [
 
 export function Header() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const { user, loading, logout } = useAuth()
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function Header() {
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault()
+    setMenuOpen(false)
     document.getElementById(href.substring(1))?.scrollIntoView({ behavior: "smooth" })
   }
 
@@ -47,7 +49,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/60 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/45">
-      <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
+      <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-lg font-semibold tracking-tight text-foreground">
             PentAI
@@ -78,7 +80,7 @@ export function Header() {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-10 max-w-[11rem]">
+                  <Button variant="ghost" className="h-10 max-w-[7.5rem] sm:max-w-[11rem]">
                     <span className="truncate">{displayName}</span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -101,7 +103,7 @@ export function Header() {
             </Button>
           )}
 
-          <Sheet>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <Menu className="h-5 w-5" />

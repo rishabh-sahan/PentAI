@@ -22,7 +22,7 @@ export default function ThemeToggler() {
     <Button
       variant="ghost"
       size="icon"
-      className="h-8 w-8"
+      className="h-9 w-9 sm:h-8 sm:w-8"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label={
         mounted ? (isDark ? "Switch to light theme" : "Switch to dark theme") : "Toggle theme"

@@ -505,6 +505,9 @@ export default function DashboardPage() {
   }
 
   const needsKeys = missingKeys.length === 3
+  // Only applies from xl up, where the answers become a real grid. Below that
+  // they are a swipeable row: five 280px columns is 1400px, which would force
+  // the whole conversation — prompts included — sideways on a phone or tablet.
   const gridStyle = {
     gridTemplateColumns: `repeat(${Math.max(selectedModels.length, 1)}, minmax(280px, 1fr))`,
   }
@@ -534,7 +537,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    // 100dvh, not 100vh: mobile browsers count their collapsing URL bar in vh,
+    // which pushes the composer below the fold and under the browser chrome.
+    <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
       {/* Sidebar — persistent on desktop */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-sidebar lg:block">
         <ChatSidebar {...sidebarProps} />
@@ -566,7 +571,7 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 lg:hidden"
+            className="h-9 w-9 lg:hidden"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
           >
@@ -577,7 +582,7 @@ export default function DashboardPage() {
             {activeThread?.title ?? "New chat"}
           </h1>
 
-          <Button variant="outline" size="sm" className="h-8" onClick={() => setPickerOpen(true)}>
+          <Button variant="outline" size="sm" className="h-9 sm:h-8" onClick={() => setPickerOpen(true)}>
             <SlidersHorizontal className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Models</span>
             <span className="ml-0.5 tabular-nums text-muted-foreground">
@@ -590,7 +595,7 @@ export default function DashboardPage() {
 
         {/* Selected model chips */}
         {selectedModels.length > 0 && (
-          <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border px-4 py-2">
+          <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {selectedModels.map((model) => (
               <button
                 key={model.id}
@@ -604,7 +609,7 @@ export default function DashboardPage() {
             ))}
             <button
               onClick={() => setPickerOpen(true)}
-              className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground transition-colors hover:border-solid hover:bg-accent hover:text-foreground"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground transition-colors hover:border-solid hover:bg-accent hover:text-foreground sm:h-[26px] sm:w-[26px]"
               aria-label="Add model"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -683,8 +688,12 @@ export default function DashboardPage() {
                       </Button>
                     </div>
 
-                    {/* Answers */}
-                    <div className="grid gap-3" style={gridStyle}>
+                    {/* Answers — swipeable row on phones and tablets (one card
+                        at a time, two side by side from sm), a grid from lg. */}
+                    <div
+                      className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:mx-0 xl:grid xl:overflow-x-visible xl:px-0 xl:pb-0"
+                      style={gridStyle}
+                    >
                       {selectedModels.map((model) => {
                         const answer = row.answers.find((a) => a.modelId === model.id)
                         const isLoading = !answer && loadingIds.includes(model.id)
@@ -693,7 +702,7 @@ export default function DashboardPage() {
                         return (
                           <div
                             key={model.id}
-                            className="group relative flex min-h-[160px] flex-col rounded-lg border border-border bg-card"
+                            className="group relative flex min-h-[160px] w-[85%] shrink-0 snap-start flex-col rounded-lg border border-border bg-card sm:w-[46%] xl:w-auto xl:shrink"
                           >
                             <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
                               <span className="truncate text-xs font-medium text-foreground">
@@ -703,7 +712,9 @@ export default function DashboardPage() {
                                 <button
                                   onClick={() => copy(answer.content, key)}
                                   aria-label="Copy answer"
-                                  className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                                  // Touch devices have no hover, so revealing
+                                  // this on group-hover would hide it for good.
+                                  className="shrink-0 rounded p-1.5 text-muted-foreground transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 lg:p-1 lg:opacity-0 lg:group-hover:opacity-100"
                                 >
                                   {copiedKey === key ? (
                                     <Check className="h-3 w-3" />

@@ -119,7 +119,7 @@ export function AiInput({
         }}
       >
         <label
-          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-9 sm:w-9"
           title="Attach files — documents, code, PDFs or images"
         >
           <input
@@ -139,7 +139,7 @@ export function AiInput({
           rows={1}
           placeholder="Ask all selected models at once…"
           // field-sizing-content fights the JS resize above, so it's disabled here.
-          className="min-h-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-[15px] leading-6 shadow-none [field-sizing:fixed] focus-visible:ring-0"
+          className="min-h-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base leading-6 shadow-none [field-sizing:fixed] focus-visible:ring-0 sm:text-[15px]"
           ref={textareaRef}
           onPaste={handlePaste}
           onChange={(e) => {
@@ -160,7 +160,7 @@ export function AiInput({
           disabled={!canSend}
           aria-label="Send message"
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors sm:h-9 sm:w-9",
             canSend
               ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : "bg-muted text-muted-foreground"
@@ -170,7 +170,7 @@ export function AiInput({
         </button>
       </div>
 
-      <p className="mt-2 text-center text-xs text-muted-foreground">
+      <p className="mt-2 hidden text-center text-xs text-muted-foreground sm:block">
         Enter to send · Shift + Enter for a new line · drag, paste or attach files
       </p>
     </div>

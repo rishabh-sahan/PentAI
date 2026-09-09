@@ -43,7 +43,7 @@ export function StatsSection() {
 
   return (
     <section className="border-b border-border">
-      <div className="mx-auto w-full max-w-6xl px-6 py-16 md:py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 md:py-20">
         <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item, i) => (
             <div

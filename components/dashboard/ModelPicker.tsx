@@ -122,8 +122,8 @@ export function ModelPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[86vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="border-b border-border px-6 py-4">
+      <DialogContent className="max-h-[88dvh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b border-border px-4 py-4 sm:px-6">
           <DialogTitle>Select models</DialogTitle>
           <DialogDescription>
             Compare up to {MAX_SELECTED} at once —{" "}
@@ -132,7 +132,7 @@ export function ModelPicker({
         </DialogHeader>
 
         {/* Provider tabs */}
-        <div className="flex items-center gap-1 border-b border-border px-4 pt-3">
+        <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-4 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map((t) => {
             const active = tab === t.key
             return (
@@ -141,7 +141,7 @@ export function ModelPicker({
                 type="button"
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "relative flex items-center gap-1.5 rounded-t-md px-3 py-2 text-sm transition-colors",
+                  "relative flex shrink-0 items-center gap-1.5 rounded-t-md px-3 py-2 text-sm transition-colors",
                   active
                     ? "text-foreground"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
@@ -165,14 +165,14 @@ export function ModelPicker({
         </div>
 
         {/* Search + actions */}
-        <div className="flex items-center gap-2 border-b border-border px-6 py-3">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3 sm:px-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search models…"
-              className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/25"
+              className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/25 sm:text-sm"
             />
           </div>
           <Button variant="outline" size="sm" className="h-9" onClick={onRefresh} disabled={syncing}>
@@ -190,7 +190,7 @@ export function ModelPicker({
           </Button>
         </div>
 
-        <div className="max-h-[52vh] overflow-y-auto px-6 py-4">
+        <div className="max-h-[46dvh] overflow-y-auto px-4 py-4 sm:px-6">
           {tab !== "all" && (
             <p className="mb-3 text-xs text-muted-foreground">{PROVIDER_BLURB[tab as Provider]}</p>
           )}

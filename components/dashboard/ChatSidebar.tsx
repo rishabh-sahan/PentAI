@@ -52,7 +52,7 @@ export function ChatSidebar({
       </div>
 
       <div className="px-3 pb-3">
-        <Button onClick={onNewChat} className="h-9 w-full justify-start gap-2">
+        <Button onClick={onNewChat} className="h-10 w-full justify-start gap-2 lg:h-9">
           <Plus className="h-4 w-4" />
           New chat
         </Button>
@@ -80,7 +80,7 @@ export function ChatSidebar({
                       if (e.key === "Enter") onCommitRename(thread.id)
                       if (e.key === "Escape") onCancelRename()
                     }}
-                    className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm outline-none focus-visible:border-foreground/30"
+                    className="h-9 w-full rounded-md border border-border bg-background px-2 text-base outline-none focus-visible:border-foreground/30 lg:h-8 lg:text-sm"
                   />
                 )
               }
@@ -96,7 +96,7 @@ export function ChatSidebar({
                   <button
                     type="button"
                     onClick={() => onSelect(thread.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left"
+                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2.5 text-left lg:py-2"
                   >
                     {thread.pinned && (
                       <Pin className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -116,7 +116,10 @@ export function ChatSidebar({
                       <button
                         type="button"
                         aria-label="Chat options"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                        // Rename/pin/delete live behind this button. Revealing
+                        // it on group-hover alone makes them unreachable on
+                        // touch, where the sidebar is the mobile drawer.
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 data-[state=open]:opacity-100 lg:h-7 lg:w-7 lg:opacity-0 lg:group-hover:opacity-100"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </button>

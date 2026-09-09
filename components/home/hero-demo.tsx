@@ -127,11 +127,15 @@ export function HeroDemo() {
         </span>
       </div>
 
-      {/* Answer columns — scrolls horizontally on narrow screens rather than squashing */}
-      <div className="overflow-x-auto">
-        <div className="grid min-w-[860px] grid-cols-5 gap-px bg-border">
+      {/* Answer columns — swipe through them on a phone, all five at once from lg.
+          A fixed 860px grid would show barely half a column on a 375px screen. */}
+      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex snap-x snap-mandatory gap-px bg-border lg:grid lg:min-w-[860px] lg:grid-cols-5">
           {MODELS.map((model, col) => (
-            <div key={model.name} className="min-h-[172px] bg-card p-3.5">
+            <div
+              key={model.name}
+              className="min-h-[172px] w-[70%] shrink-0 snap-start bg-card p-3.5 sm:w-[38%] lg:w-auto"
+            >
               <div className="mb-3 flex items-center justify-between gap-2">
                 <span className="truncate text-xs font-medium text-foreground">{model.name}</span>
                 <span

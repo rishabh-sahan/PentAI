@@ -41,7 +41,7 @@ export function FAQSection() {
 
   return (
     <section id="faq" className="border-b border-border">
-      <div className="mx-auto w-full max-w-6xl px-6 py-20 md:py-28">
+      <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 md:py-28">
         <div className="grid gap-12 md:grid-cols-[1fr_1.4fr] md:gap-16">
           <div data-reveal>
             <p className="text-base font-semibold uppercase tracking-[0.12em] text-primary md:text-lg">FAQ</p>

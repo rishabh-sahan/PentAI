@@ -67,7 +67,7 @@ export default function Settings({ trigger = true }: { trigger?: boolean }) {
   return (
     <>
       {trigger && (
-        <Button variant="outline" size="sm" className="h-8" onClick={() => setOpen(true)}>
+        <Button variant="outline" size="sm" className="h-9 sm:h-8" onClick={() => setOpen(true)}>
           Settings
         </Button>
       )}
@@ -104,7 +104,7 @@ export default function Settings({ trigger = true }: { trigger?: boolean }) {
                   value={draft[field.id] ?? ""}
                   onChange={(e) => setDraft((prev) => ({ ...prev, [field.id]: e.target.value }))}
                   placeholder={field.placeholder}
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring/30"
+                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring/30 sm:h-9 sm:text-sm"
                 />
                 <p className="mt-1.5 text-xs text-muted-foreground">{field.help}</p>
               </div>
