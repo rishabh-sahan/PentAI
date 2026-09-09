@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { getRedirectResult, onAuthStateChanged, signOut, type User } from "firebase/auth";
 
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client";
 
@@ -18,6 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const configured = isFirebaseConfigured();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!configured) return;
+
+    // Completes the LoginModal's popup-blocked fallback: after the provider
+    // redirects back here, this resolves with the signed-in user. The cookie
+    // itself is minted below by onAuthStateChanged, which fires either way.
+    getRedirectResult(getFirebaseAuth())
+      .then((result) => {
+        if (result?.user) router.push("/dashboard");
+      })
+      .catch((err) => console.error("Redirect sign-in failed:", err));
+  }, [configured, router]);
 
   useEffect(() => {
     if (!configured) {

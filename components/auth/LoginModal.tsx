@@ -7,6 +7,7 @@ import {
   GithubAuthProvider,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   type AuthProvider as FirebaseAuthProvider,
 } from "firebase/auth"
 
@@ -68,7 +69,14 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       router.refresh()
     } catch (err) {
       const code = (err as { code?: string })?.code ?? ""
-      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+      if (code === "auth/popup-blocked") {
+        // No popup blocker can stop a full-page redirect. AuthContext picks
+        // up the result via getRedirectResult once the user lands back here.
+        const provider: FirebaseAuthProvider =
+          kind === "google" ? new GoogleAuthProvider() : new GithubAuthProvider()
+        await signInWithRedirect(getFirebaseAuth(), provider)
+        return
+      } else if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
         setError(null) // user backed out; not an error worth showing
       } else if (code === "auth/account-exists-with-different-credential") {
         setError("That email is already registered with the other sign-in method.")
